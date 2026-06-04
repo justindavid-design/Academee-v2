@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
+import { getMissingPublicEnvError } from './env'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+const SUPABASE_CONFIG_ERROR = getMissingPublicEnvError(['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'])
 
 function makeNoopClient() {
   const noop = async () => ({ data: null, error: new Error('Supabase not configured') })
@@ -13,6 +15,8 @@ function makeNoopClient() {
   }
 
   return {
+    configError: SUPABASE_CONFIG_ERROR,
+    isConfigured: false,
     auth: {
       getUser: async () => ({ data: { user: null } }),
       getSession: async () => ({ data: { session: null }, error: null }),
@@ -29,7 +33,9 @@ function makeNoopClient() {
 
 let supabase
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn('VITE_SUPABASE_* env vars not set - using noop Supabase client')
+  if (typeof console !== 'undefined' && console.error) {
+    console.error(SUPABASE_CONFIG_ERROR)
+  }
   supabase = makeNoopClient()
 } else {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -40,6 +46,8 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       flowType: 'pkce',
     },
   })
+  supabase.isConfigured = true
+  supabase.configError = ''
 }
 
 export default supabase

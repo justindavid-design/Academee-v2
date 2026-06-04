@@ -1,4 +1,5 @@
 import { getApiAuthHeaders } from './apiClient'
+import { getApiBaseUrl } from './env'
 
 export const SUPPORTED_FILE_EXTENSIONS = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'zip']
 export const SUPPORTED_FILE_TYPES = [
@@ -130,11 +131,17 @@ export async function uploadFile(file) {
   // Remove 'Content-Type': 'application/json' which breaks multipart/form-data
   delete headers['Content-Type']
 
+  const apiBaseUrl = getApiBaseUrl()
+  const uploadUrl = `${apiBaseUrl || ''}/api/upload`
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+  const timeoutId = controller ? window.setTimeout(() => controller.abort(), 30000) : null
+
   try {
-    const response = await fetch('http://localhost:8787/api/upload', {
+    const response = await fetch(uploadUrl, {
       method: 'POST',
       headers,
       body: formData,
+      signal: controller ? controller.signal : undefined,
     })
 
     if (!response.ok) {
@@ -158,15 +165,16 @@ export async function uploadFile(file) {
     const data = await response.json()
     return normalizeAttachment(data)
   } catch (error) {
-    // Better error message for debugging
     const message = error instanceof Error ? error.message : String(error)
-    if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
-      throw new Error(
-        `Network error uploading file. Make sure the API server is running on port 8787. ` +
-        `Error: ${message}`
-      )
+    if (message.includes('AbortError') || message.includes('timed out')) {
+      throw new Error(`Upload timed out for ${file.name}. Please try again.`)
     }
-    throw new Error(`Could not upload ${file.name}: ${message}`)
+    if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+      throw new Error(`Network error uploading ${file.name}. Please check the API server or retry.`)
+    }
+    throw new Error(`Could not upload ${file.name}. ${message}`)
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId)
   }
 }
 

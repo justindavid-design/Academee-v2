@@ -4,11 +4,13 @@ import supabase from './supabaseClient'
 const AuthContext = createContext({
   user: null,
   loading: true,
+  error: '',
 })
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [isVisible, setIsVisible] = useState(false)
   const [profileName, setProfileName] = useState('Learner')
 
@@ -16,6 +18,12 @@ export function AuthProvider({ children }) {
   // AUTH + SESSION RESTORATION
   // =========================================
   useEffect(() => {
+    if (supabase.configError) {
+      setError(supabase.configError)
+      setLoading(false)
+      return undefined
+    }
+
     let mounted = true
 
     async function loadSession() {
@@ -29,6 +37,7 @@ export function AuthProvider({ children }) {
         if (mounted) {
           setUser(currentUser)
           setLoading(false)
+          setError('')
         }
 
         if (currentUser?.id) {
@@ -38,7 +47,13 @@ export function AuthProvider({ children }) {
           )
         }
       } catch (err) {
-        console.warn('getSession failed', err)
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('Session restoration failed', err)
+        }
+
+        if (mounted) {
+          setError('We could not restore your session. Please refresh and try again.')
+        }
 
         if (mounted) {
           setLoading(false)
@@ -52,9 +67,12 @@ export function AuthProvider({ children }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (supabase.configError) return
+
         const currentUser = session?.user ?? null
 
         setUser(currentUser)
+        setError('')
 
         if (currentUser?.id) {
           window.localStorage.setItem(
@@ -118,13 +136,15 @@ export function AuthProvider({ children }) {
           )
 
           if (status === 406) {
-            console.warn(
-              'Profile query returned 406; falling back to user metadata'
-            )
+            if (typeof console !== 'undefined' && console.warn) {
+              console.warn('Profile query returned 406; falling back to user metadata')
+            }
           }
         }
       } catch (err) {
-        console.warn('getProfile failed', err)
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('Profile lookup failed', err)
+        }
 
         if (mounted) {
           setProfileName(
@@ -147,6 +167,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     loading,
+    error,
     isVisible,
     profileName,
   }

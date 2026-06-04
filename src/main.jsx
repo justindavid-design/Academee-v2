@@ -9,6 +9,7 @@ import { AccountProvider } from './lib/AccountContext'
 import useTheme from './lib/useTheme'
 import useAccessibilitySettings from './accessibility/useAccessibilitySettings'
 import FocusReader from './components/accessibility/FocusReader'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function ThemeBootstrap() {
   useTheme()
@@ -67,7 +68,9 @@ function ThemedShell() {
           <AccountProvider>
             <ThemeBootstrap />
             <FocusReader />
-            <App />
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
           </AccountProvider>
         </AuthProvider>
       </ThemeProvider>

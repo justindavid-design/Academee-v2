@@ -5,6 +5,15 @@ const path = require('path')
 const multer = require('multer')
 const fs = require('fs')
 
+function requireServerEnv(keys) {
+  const missing = keys.filter((key) => !process.env[key])
+  if (!missing.length) return
+
+  throw new Error(`Missing required server environment variables: ${missing.join(', ')}`)
+}
+
+requireServerEnv(['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'])
+
 // Ensure uploads directory exists
 const uploadsDir = path.resolve(__dirname, 'uploads')
 if (!fs.existsSync(uploadsDir)) {

@@ -1,38 +1,48 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
-import About from './components/About'
-import Features from './components/Features'
-import Footer from './components/Footer'
-import Hero from './components/Hero'
-import HowItWorks from './components/HowItWorks'
-import Login from './components/Login'
-import PasswordReset from './components/PasswordReset'
-import RecoverEmail from './components/RecoverEmail'
-import RecoverReset from './components/RecoverReset'
-import RecoverVerify from './components/RecoverVerify'
-import SignUp from './components/SignUp'
-import Testimonials from './components/Testimonials'
-import Archived from './components/dashboard/Archived'
-import Calendar from './components/dashboard/Calendar'
-import CourseDetails from './components/dashboard/CourseDetails'
-import Courses from './components/dashboard/Courses'
-import Dashboard from './components/dashboard/dashboard'
-import EnrollPage from './components/dashboard/EnrollPage'
-import Settings from './components/dashboard/Settings'
-import Tasks from './components/dashboard/Tasks'
-import Notifications from './components/Notifications'
-import QuizMaker from './components/dashboard/QuizMaker'
-import QuizBuilderPage from './components/quiz/QuizBuilderPage'
-import QuizTypeSelector from './components/quiz/QuizTypeSelector'
-import QuestionEditor from './components/quiz/QuestionEditor'
-import StudentQuizPage from './components/student-quiz/StudentQuizPage'
-import ReviewerTypeSelector from './components/reviewer/ReviewerTypeSelector'
-import ReviewerBuilderPage from './components/reviewer/ReviewerBuilderPage'
-import { ReviewerStudio } from './components/reviewer/ReviewerBuilderPage'
+import Loading from './components/Loading'
 import RequireAuth from './lib/RequireAuth'
 import { CourseContextProvider } from './lib/CourseNameContext'
 import { NotificationProvider } from './lib/NotificationContext'
 import { ToastProvider } from './lib/ToastProvider'
+
+const Hero = lazy(() => import('./components/Hero'))
+const Features = lazy(() => import('./components/Features'))
+const HowItWorks = lazy(() => import('./components/HowItWorks'))
+const About = lazy(() => import('./components/About'))
+const Testimonials = lazy(() => import('./components/Testimonials'))
+const Footer = lazy(() => import('./components/Footer'))
+const Dashboard = lazy(() => import('./components/dashboard/dashboard'))
+const Login = lazy(() => import('./components/Login'))
+const SignUp = lazy(() => import('./components/SignUp'))
+const PasswordReset = lazy(() => import('./components/PasswordReset'))
+const RecoverEmail = lazy(() => import('./components/RecoverEmail'))
+const RecoverVerify = lazy(() => import('./components/RecoverVerify'))
+const RecoverReset = lazy(() => import('./components/RecoverReset'))
+const Courses = lazy(() => import('./components/dashboard/Courses'))
+const EnrollPage = lazy(() => import('./components/dashboard/EnrollPage'))
+const Calendar = lazy(() => import('./components/dashboard/Calendar'))
+const Tasks = lazy(() => import('./components/dashboard/Tasks'))
+const Archived = lazy(() => import('./components/dashboard/Archived'))
+const Notifications = lazy(() => import('./components/Notifications'))
+const CourseDetails = lazy(() => import('./components/dashboard/CourseDetails'))
+const Settings = lazy(() => import('./components/dashboard/Settings'))
+const QuizMaker = lazy(() => import('./components/dashboard/QuizMaker'))
+const QuizBuilderPage = lazy(() => import('./components/quiz/QuizBuilderPage'))
+const QuizTypeSelector = lazy(() => import('./components/quiz/QuizTypeSelector'))
+const QuestionEditor = lazy(() => import('./components/quiz/QuestionEditor'))
+const StudentQuizPage = lazy(() => import('./components/student-quiz/StudentQuizPage'))
+const ReviewerTypeSelector = lazy(() => import('./components/reviewer/ReviewerTypeSelector'))
+const ReviewerBuilderPage = lazy(() => import('./components/reviewer/ReviewerBuilderPage'))
+const ReviewerStudio = lazy(() => import('./components/reviewer/ReviewerStudioPage'))
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center p-8">
+      <Loading message="Loading page..." />
+    </div>
+  )
+}
 
 function Landing() {
   return (
@@ -70,35 +80,37 @@ export default function App() {
       <NotificationProvider>
         <CourseContextProvider>
           <Router>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/recover" element={<RecoverEmail />} />
-              <Route path="/recover/verify" element={<RecoverVerify />} />
-              <Route path="/recover/reset" element={<RecoverReset />} />
-              <Route path="/reset" element={<PasswordReset />} />
-              <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
-              <Route path="/courses" element={<RequireAuth><Dashboard><Courses /></Dashboard></RequireAuth>} />
-              <Route path="/courses/enroll" element={<RequireAuth><Dashboard><EnrollPage /></Dashboard></RequireAuth>} />
-              <Route path="/courses/:id" element={<RequireAuth><Dashboard><CourseDetails /></Dashboard></RequireAuth>} />
-              <Route path="/dashboard/course/:courseId/quiz/types" element={<RequireAuth><QuizTypeSelector /></RequireAuth>} />
-              <Route path="/dashboard/course/:courseId/reviewer/types" element={<RequireAuth><ReviewerTypeSelector /></RequireAuth>} />
-              <Route path="/dashboard/course/:courseId/quiz/create" element={<RequireAuth><QuizBuilderPage /></RequireAuth>} />
-              <Route path="/dashboard/course/:courseId/quiz/:quizId/edit" element={<RequireAuth><QuizBuilderPage /></RequireAuth>} />
-              <Route path="/courses/:courseId/quiz/:quizId/take" element={<RequireAuth><StudentQuizPage /></RequireAuth>} />
-              <Route path="/courses/:courseId/quizzes/:quizId/questions/:questionId/edit" element={<RequireAuth><QuestionEditor /></RequireAuth>} />
-              <Route path="/dashboard/course/:courseId/reviewer/create" element={<RequireAuth><Dashboard><ReviewerBuilderPage /></Dashboard></RequireAuth>} />
-              <Route path="/dashboard/course/:courseId/reviewer/:reviewerId/edit" element={<RequireAuth><Dashboard><ReviewerBuilderPage /></Dashboard></RequireAuth>} />
-              <Route path="/calendar" element={<RequireAuth><Dashboard><Calendar /></Dashboard></RequireAuth>} />
-              <Route path="/tasks" element={<RequireAuth><Dashboard><Tasks /></Dashboard></RequireAuth>} />
-              <Route path="/reviewers" element={<RequireAuth><Dashboard><ReviewerStudio /></Dashboard></RequireAuth>} />
-              <Route path="/quiz-maker" element={<RequireAuth><Dashboard><QuizMaker /></Dashboard></RequireAuth>} />
-              <Route path="/archived" element={<RequireAuth><Dashboard><Archived /></Dashboard></RequireAuth>} />
-              <Route path="/settings" element={<RequireAuth><Dashboard><Settings /></Dashboard></RequireAuth>} />
-              <Route path="/notifications" element={<RequireAuth><Dashboard><Notifications /></Dashboard></RequireAuth>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<SignUp />} />
+                <Route path="/recover" element={<RecoverEmail />} />
+                <Route path="/recover/verify" element={<RecoverVerify />} />
+                <Route path="/recover/reset" element={<RecoverReset />} />
+                <Route path="/reset" element={<PasswordReset />} />
+                <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+                <Route path="/courses" element={<RequireAuth><Dashboard><Courses /></Dashboard></RequireAuth>} />
+                <Route path="/courses/enroll" element={<RequireAuth><Dashboard><EnrollPage /></Dashboard></RequireAuth>} />
+                <Route path="/courses/:id" element={<RequireAuth><Dashboard><CourseDetails /></Dashboard></RequireAuth>} />
+                <Route path="/dashboard/course/:courseId/quiz/types" element={<RequireAuth><QuizTypeSelector /></RequireAuth>} />
+                <Route path="/dashboard/course/:courseId/reviewer/types" element={<RequireAuth><ReviewerTypeSelector /></RequireAuth>} />
+                <Route path="/dashboard/course/:courseId/quiz/create" element={<RequireAuth><QuizBuilderPage /></RequireAuth>} />
+                <Route path="/dashboard/course/:courseId/quiz/:quizId/edit" element={<RequireAuth><QuizBuilderPage /></RequireAuth>} />
+                <Route path="/courses/:courseId/quiz/:quizId/take" element={<RequireAuth><StudentQuizPage /></RequireAuth>} />
+                <Route path="/courses/:courseId/quizzes/:quizId/questions/:questionId/edit" element={<RequireAuth><QuestionEditor /></RequireAuth>} />
+                <Route path="/dashboard/course/:courseId/reviewer/create" element={<RequireAuth><Dashboard><ReviewerBuilderPage /></Dashboard></RequireAuth>} />
+                <Route path="/dashboard/course/:courseId/reviewer/:reviewerId/edit" element={<RequireAuth><Dashboard><ReviewerBuilderPage /></Dashboard></RequireAuth>} />
+                <Route path="/calendar" element={<RequireAuth><Dashboard><Calendar /></Dashboard></RequireAuth>} />
+                <Route path="/tasks" element={<RequireAuth><Dashboard><Tasks /></Dashboard></RequireAuth>} />
+                <Route path="/reviewers" element={<RequireAuth><Dashboard><ReviewerStudio /></Dashboard></RequireAuth>} />
+                <Route path="/quiz-maker" element={<RequireAuth><Dashboard><QuizMaker /></Dashboard></RequireAuth>} />
+                <Route path="/archived" element={<RequireAuth><Dashboard><Archived /></Dashboard></RequireAuth>} />
+                <Route path="/settings" element={<RequireAuth><Dashboard><Settings /></Dashboard></RequireAuth>} />
+                <Route path="/notifications" element={<RequireAuth><Dashboard><Notifications /></Dashboard></RequireAuth>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </Router>
         </CourseContextProvider>
       </NotificationProvider>

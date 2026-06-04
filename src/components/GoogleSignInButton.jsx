@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import supabase from '../lib/supabaseClient'
+import { getMissingPublicEnvError } from '../lib/env'
 
 /**
  * Google Sign-In Button Component
@@ -17,6 +18,13 @@ export default function GoogleSignInButton({
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    const envError = getMissingPublicEnvError(['VITE_GOOGLE_CLIENT_ID'])
+    if (envError) {
+      setError(envError)
+      if (onError) onError(envError)
+      return undefined
+    }
+
     // Initialize Google Sign-In when component mounts
     if (window.google) {
       window.google.accounts.id.initialize({
@@ -133,7 +141,7 @@ export default function GoogleSignInButton({
   return (
     <div className="w-full">
       {error && (
-        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+        <div className="mb-3 rounded border border-token bg-surface p-3 text-sm text-main">
           {error}
         </div>
       )}
