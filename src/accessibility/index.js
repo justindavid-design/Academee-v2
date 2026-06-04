@@ -1,0 +1,8 @@
+export { default as useAccessibilitySettings } from './useAccessibilitySettings'
+export * from './useAccessibilitySettings'
+export { default as useSpeechSynthesis } from './useSpeechSynthesis'
+export * from './useSpeechSynthesis'
+export { default as useSpeechRecognition } from './useSpeechRecognition'
+export * from './useSpeechRecognition'
+export { default as useFocusSpeech } from './useFocusSpeech'
+export * from './useFocusSpeech'

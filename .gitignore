@@ -1,0 +1,26 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+.DS_Store
+
+# Temporary files
+tmp_*.html
+tmp_*.jsx
+tmp_*.json
+tmp_quiz_maker/
+tmp_render/
+report_render/
+
+# Log files
+*.log
+*.err
+npm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# VS Code
+.vscode/

@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="32x32" href="/src/assets/logo_tem.png">
+    <script>
+      (function () {
+        try {
+          var root = document.documentElement
+          var mode = localStorage.getItem('theme-mode')
+          var preset = localStorage.getItem('theme-preset')
+          var legacy = localStorage.getItem('theme')
+          var customThemes = ['theme-aquatic', 'theme-desert', 'theme-dusk', 'theme-night-sky', 'theme-neon-pulse', 'theme-high-contrast']
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+          var customTheme = customThemes.indexOf(preset) >= 0 ? preset : (customThemes.indexOf(legacy) >= 0 ? legacy : '')
+          var resolvedMode = mode === 'light' || mode === 'dark' || mode === 'system'
+            ? mode
+            : (legacy === 'light' || legacy === 'dark' || legacy === 'system' ? legacy : 'system')
+          var resolvedTheme = customTheme
+            ? (customTheme === 'theme-desert' || customTheme === 'theme-high-contrast' ? 'light' : 'dark')
+            : (resolvedMode === 'system' ? (prefersDark ? 'dark' : 'light') : resolvedMode)
+
+          customThemes.forEach(function (themeClass) {
+            root.classList.remove(themeClass)
+          })
+
+          if (customTheme) root.classList.add(customTheme)
+          root.classList.toggle('dark', resolvedTheme === 'dark')
+          root.dataset.themeMode = resolvedMode
+          root.dataset.themePreset = customTheme
+          root.dataset.themeResolved = resolvedTheme
+          root.style.colorScheme = resolvedTheme === 'dark' ? 'dark' : 'light'
+        } catch (e) {}
+      })()
+    </script>
+    <!-- Google Sign-In SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
