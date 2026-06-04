@@ -3,6 +3,5 @@
   "installCommand": "npm ci",
   "env": {
     "NODE_ENV": "production"
-  },
-  "regions": ["auto"]
+  }
 }
