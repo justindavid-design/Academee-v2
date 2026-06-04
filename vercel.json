@@ -1,10 +1,6 @@
 {
   "buildCommand": "npm install && npm run build",
   "installCommand": "npm ci",
-  "dev": {
-    "command": "vite --host",
-    "port": 3000
-  },
   "env": {
     "NODE_ENV": "production"
   },
