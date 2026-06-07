@@ -1,0 +1,298 @@
+{
+  "course": {
+    "id": "ca807062-e912-4256-bb13-044c626a3021",
+    "title": "Quiz Walkthrough 1780753620523",
+    "author": "d92fffc3-7d40-46fd-81fe-5cc4d378a2a6",
+    "published": true,
+    "created_at": "2026-06-06T13:47:05.634654+00:00",
+    "course_code": "32AV4X",
+    "cover_url": null,
+    "section": "Demo",
+    "level": "1",
+    "subject": "Automation",
+    "grading_scale": "percentage",
+    "enrollment_status": "open",
+    "visibility": "students_only",
+    "cover_image": null,
+    "author_name": null,
+    "author_avatar_url": null,
+    "teacher_role": "teacher",
+    "enrolled_students": [],
+    "learner_count": 0,
+    "assignment_count": 0,
+    "quiz_count": 0,
+    "student_count": 0,
+    "next_due_at": null,
+    "next_activity_title": null,
+    "latest_announcement": null
+  },
+  "quiz": {
+    "id": "07aac7f9-b411-402a-805b-1f56d0b8c3a0",
+    "course_id": "ca807062-e912-4256-bb13-044c626a3021",
+    "title": "One Question Checkpoint",
+    "meta": {
+      "mode": "practice",
+      "settings": {
+        "time_limit": 5,
+        "attempts_allowed": 1,
+        "passing_score": 100,
+        "module_id": null,
+        "shuffleQuestions": false,
+        "shuffleAnswers": false,
+        "showCorrectAnswers": true,
+        "autoGrading": true,
+        "mode": "practice",
+        "instructions": "A tiny quiz for end-to-end validation"
+      },
+      "module_id": null,
+      "questions": [
+        {
+          "id": "q1",
+          "text": "What is 2 + 2?",
+          "trivia": "",
+          "choices": [
+            "3",
+            "4"
+          ],
+          "correct": 1,
+          "options": [
+            "3",
+            "4"
+          ],
+          "question": "What is 2 + 2?",
+          "difficulty": "Easy",
+          "conceptTags": [
+            "arithmetic"
+          ],
+          "explanation": "2 + 2 equals 4.",
+          "learningTip": "",
+          "correctAnswer": "4"
+        }
+      ],
+      "time_limit": 5,
+      "autoGrading": true,
+      "instructions": "A tiny quiz for end-to-end validation",
+      "passing_score": 100,
+      "shuffleAnswers": false,
+      "attempts_allowed": 1,
+      "shuffleQuestions": false,
+      "showCorrectAnswers": true
+    },
+    "created_at": "2026-06-06T13:47:08.25133+00:00",
+    "description": "A tiny quiz for end-to-end validation",
+    "published": true,
+    "questions": [
+      {
+        "id": "q1",
+        "text": "What is 2 + 2?",
+        "trivia": "",
+        "choices": [
+          "3",
+          "4"
+        ],
+        "correct": 1,
+        "options": [
+          "3",
+          "4"
+        ],
+        "question": "What is 2 + 2?",
+        "difficulty": "Easy",
+        "conceptTags": [
+          "arithmetic"
+        ],
+        "explanation": "2 + 2 equals 4.",
+        "learningTip": "",
+        "correctAnswer": "4"
+      }
+    ],
+    "assignment_id": "1eb62ee3-5bb0-4478-8cc6-162c2f9337b0",
+    "module_id": null,
+    "instructions": "A tiny quiz for end-to-end validation",
+    "due_at": null,
+    "status": "published",
+    "question_count": 1,
+    "time_limit": 5,
+    "attempts_allowed": 1,
+    "passing_score": 100,
+    "shuffleQuestions": false,
+    "shuffleAnswers": false,
+    "showCorrectAnswers": true,
+    "autoGrading": true,
+    "mode": "practice"
+  },
+  "enrolled": {
+    "ok": true,
+    "course": {
+      "id": "ca807062-e912-4256-bb13-044c626a3021",
+      "title": "Quiz Walkthrough 1780753620523",
+      "author": "d92fffc3-7d40-46fd-81fe-5cc4d378a2a6",
+      "published": true,
+      "created_at": "2026-06-06T13:47:05.634654+00:00",
+      "course_code": "32AV4X",
+      "cover_url": null,
+      "section": "Demo",
+      "level": "1",
+      "subject": "Automation",
+      "grading_scale": "percentage",
+      "enrollment_status": "open",
+      "visibility": "students_only",
+      "cover_image": null,
+      "author_name": null,
+      "author_avatar_url": null,
+      "teacher_role": "teacher",
+      "enrolled_students": [
+        {
+          "id": "3a30e34b-a9e0-4442-b0eb-3b5c560b0d81",
+          "display_name": "Quiz Student",
+          "avatar_url": null,
+          "role": "student",
+          "enrolled_at": "2026-06-06T13:47:09.608367+00:00"
+        }
+      ],
+      "learner_count": 1,
+      "assignment_count": 0,
+      "quiz_count": 1,
+      "student_count": 1,
+      "next_due_at": null,
+      "next_activity_title": null,
+      "latest_announcement": null
+    }
+  },
+  "studentCourses": [
+    {
+      "id": "ca807062-e912-4256-bb13-044c626a3021",
+      "title": "Quiz Walkthrough 1780753620523",
+      "author": "d92fffc3-7d40-46fd-81fe-5cc4d378a2a6",
+      "published": true,
+      "created_at": "2026-06-06T13:47:05.634654+00:00",
+      "course_code": "32AV4X",
+      "cover_url": null,
+      "section": "Demo",
+      "level": "1",
+      "subject": "Automation",
+      "grading_scale": "percentage",
+      "enrollment_status": "open",
+      "visibility": "students_only",
+      "cover_image": null,
+      "author_name": null,
+      "author_avatar_url": null,
+      "teacher_role": "teacher",
+      "enrolled_students": [
+        {
+          "id": "3a30e34b-a9e0-4442-b0eb-3b5c560b0d81",
+          "display_name": "Quiz Student",
+          "avatar_url": null,
+          "role": "student",
+          "enrolled_at": "2026-06-06T13:47:09.608367+00:00"
+        }
+      ],
+      "learner_count": 1,
+      "assignment_count": 0,
+      "quiz_count": 1,
+      "student_count": 1,
+      "next_due_at": null,
+      "next_activity_title": null,
+      "latest_announcement": null
+    }
+  ],
+  "quizList": [
+    {
+      "id": "07aac7f9-b411-402a-805b-1f56d0b8c3a0",
+      "course_id": "ca807062-e912-4256-bb13-044c626a3021",
+      "title": "One Question Checkpoint",
+      "meta": {
+        "mode": "practice",
+        "settings": {
+          "time_limit": 5,
+          "attempts_allowed": 1,
+          "passing_score": 100,
+          "module_id": null,
+          "shuffleQuestions": false,
+          "shuffleAnswers": false,
+          "showCorrectAnswers": true,
+          "autoGrading": true,
+          "mode": "practice",
+          "instructions": "A tiny quiz for end-to-end validation"
+        },
+        "module_id": null,
+        "questions": [
+          {
+            "id": "q1",
+            "text": "What is 2 + 2?",
+            "trivia": "",
+            "choices": [
+              "3",
+              "4"
+            ],
+            "correct": 1,
+            "options": [
+              "3",
+              "4"
+            ],
+            "question": "What is 2 + 2?",
+            "difficulty": "Easy",
+            "conceptTags": [
+              "arithmetic"
+            ],
+            "explanation": "2 + 2 equals 4.",
+            "learningTip": "",
+            "correctAnswer": "4"
+          }
+        ],
+        "time_limit": 5,
+        "autoGrading": true,
+        "instructions": "A tiny quiz for end-to-end validation",
+        "passing_score": 100,
+        "shuffleAnswers": false,
+        "attempts_allowed": 1,
+        "shuffleQuestions": false,
+        "showCorrectAnswers": true
+      },
+      "created_at": "2026-06-06T13:47:08.25133+00:00",
+      "description": "A tiny quiz for end-to-end validation",
+      "published": true,
+      "questions": [
+        {
+          "id": "q1",
+          "text": "What is 2 + 2?",
+          "trivia": "",
+          "choices": [
+            "3",
+            "4"
+          ],
+          "correct": 1,
+          "options": [
+            "3",
+            "4"
+          ],
+          "question": "What is 2 + 2?",
+          "difficulty": "Easy",
+          "conceptTags": [
+            "arithmetic"
+          ],
+          "explanation": "2 + 2 equals 4.",
+          "learningTip": "",
+          "correctAnswer": "4"
+        }
+      ],
+      "assignment_id": "1eb62ee3-5bb0-4478-8cc6-162c2f9337b0",
+      "module_id": null,
+      "instructions": "A tiny quiz for end-to-end validation",
+      "due_at": null,
+      "status": "published",
+      "question_count": 1,
+      "time_limit": 5,
+      "attempts_allowed": 1,
+      "passing_score": 100,
+      "shuffleQuestions": false,
+      "shuffleAnswers": false,
+      "showCorrectAnswers": true,
+      "autoGrading": true,
+      "mode": "practice",
+      "pending_review_count": 0,
+      "submission_count": 0,
+      "submission": null,
+      "status_for_user": "assigned"
+    }
+  ]
+}

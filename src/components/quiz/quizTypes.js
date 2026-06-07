@@ -104,6 +104,7 @@ export function createQuizDraft(type = 'multiple-choice') {
     passing_score: 70,
     status: 'draft',
     module_id: '',
+    mode: 'practice',
     visibility: 'published',
     shuffleQuestions: false,
     shuffleAnswers: false,
@@ -115,4 +116,44 @@ export function createQuizDraft(type = 'multiple-choice') {
 
 export function quizDraftKey(courseId, draftId) {
   return `academee_quiz_builder_${courseId}_${draftId || 'draft'}`
+}
+
+export function normalizePassThreshold(value, fallback = 0.7) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  if (numeric > 1) return numeric / 100
+  if (numeric < 0) return fallback
+  return numeric
+}
+
+export function getQuizQuestionsSource(quiz = {}) {
+  const source = quiz?.meta?.questions ?? quiz?.questions ?? quiz?.question_bank ?? quiz?.content ?? []
+  if (Array.isArray(source)) return source
+  return source ? [source] : []
+}
+
+export function getQuizSettings(quiz = {}) {
+  const meta = quiz?.meta || {}
+  const settings = meta.settings || {}
+
+  return {
+    time_limit: Number(
+      meta.time_limit ??
+        meta.duration ??
+        quiz.time_limit ??
+        quiz.time_limit_minutes ??
+        settings.time_limit ??
+        settings.duration ??
+        30
+    ) || 30,
+    attempts_allowed: Number(meta.attempts_allowed ?? quiz.attempts_allowed ?? settings.attempts_allowed ?? 1) || 1,
+    passing_score: Number(meta.passing_score ?? quiz.passing_score ?? settings.passing_score ?? 70) || 70,
+    module_id: meta.module_id ?? quiz.module_id ?? settings.module_id ?? '',
+    shuffleQuestions: Boolean(meta.shuffleQuestions ?? settings.shuffleQuestions ?? quiz.shuffleQuestions),
+    shuffleAnswers: Boolean(meta.shuffleAnswers ?? settings.shuffleAnswers ?? quiz.shuffleAnswers),
+    showCorrectAnswers: meta.showCorrectAnswers !== false && settings.showCorrectAnswers !== false && quiz.showCorrectAnswers !== false,
+    autoGrading: meta.autoGrading !== false && settings.autoGrading !== false && quiz.autoGrading !== false,
+    mode: String(meta.mode || settings.mode || quiz.mode || 'practice').toLowerCase(),
+    instructions: meta.instructions ?? quiz.instructions ?? settings.instructions ?? '',
+  }
 }

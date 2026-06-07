@@ -367,9 +367,14 @@ export function selectAdaptiveNextQuestion({
   currentOutcome = null,
 }) {
   const normalizedQuestions = normalizeQuizQuestions(questions)
+  const answeredSet = new Set(
+    (answeredIndices || [])
+      .map((index) => Number(index))
+      .filter((index) => Number.isInteger(index) && index >= 0)
+  )
   const remaining = normalizedQuestions
     .map((question, index) => ({ question, index }))
-    .filter(({ index }) => !answeredIndices.includes(index))
+    .filter(({ index }) => !answeredSet.has(index) && index !== currentIndex)
 
   if (!remaining.length) {
     return null
@@ -393,7 +398,8 @@ export function selectAdaptiveNextQuestion({
   }))
 
   scored.sort((a, b) => b.score - a.score || Math.abs(getDifficultyIndex(normalizedQuestions[a.index]?.difficulty) - getDifficultyIndex(targetDifficulty)) - Math.abs(getDifficultyIndex(normalizedQuestions[b.index]?.difficulty) - getDifficultyIndex(targetDifficulty)) || a.index - b.index)
-  return scored[0]?.index ?? remaining[0].index
+  const selectedIndex = scored[0]?.index ?? remaining[0].index
+  return selectedIndex === currentIndex ? remaining.find((item) => item.index !== currentIndex)?.index ?? null : selectedIndex
 }
 
 export function buildAdaptiveInsights({ masteryByConcept = {}, questionAnalytics = [] } = {}) {

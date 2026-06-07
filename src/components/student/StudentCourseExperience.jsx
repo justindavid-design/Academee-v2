@@ -43,6 +43,7 @@ import { parseAttachments, parseContentWithAttachments } from '../../lib/fileUti
 import { enrichSubmission, getSubmissionStatus } from '../../lib/submissionStatus'
 import { subscribeLmsEvent } from '../../lib/lmsEvents'
 import AdaptiveInsightPanel from '../adaptive/AdaptiveInsightPanel'
+import { getQuizSettings } from '../quiz/quizTypes'
 
 const demoQuizQuestions = [
   {
@@ -674,6 +675,7 @@ function ModuleResource({ icon: Icon, title, meta, action, onClick }) {
 
 function QuizPlayer({ quiz, onClose, onFinish }) {
   const questions = useMemo(() => getQuizQuestions(quiz), [quiz])
+  const quizSettings = useMemo(() => getQuizSettings(quiz), [quiz])
   const autosaveKey = `academee:quiz:${quiz.id || quiz.assignment_id || quiz.title}:draft`
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState(() => {
@@ -684,7 +686,7 @@ function QuizPlayer({ quiz, onClose, onFinish }) {
       return {}
     }
   })
-  const [secondsLeft, setSecondsLeft] = useState(Math.max(60, (quiz.time_limit_minutes || 15) * 60))
+  const [secondsLeft, setSecondsLeft] = useState(Math.max(60, (quizSettings.time_limit || 15) * 60))
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
@@ -729,7 +731,7 @@ function QuizPlayer({ quiz, onClose, onFinish }) {
       score: correct,
       total: questions.length,
       percent,
-      passed: percent >= Number(quiz.passing_percent || 70),
+      passed: percent >= Number(quizSettings.passing_score || 70),
       timeTaken: Math.round((Date.now() - startedAt.current) / 1000),
       answers,
       questions,

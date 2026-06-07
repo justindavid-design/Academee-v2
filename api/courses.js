@@ -81,6 +81,35 @@ async function ensureUniqueSlug(db, title, currentSlug = null) {
   return `${base}-${Date.now()}`
 }
 
+async function checkActiveEnrollment(db, userId, courseId) {
+  const activeStatuses = new Set(['', 'active', 'enrolled'])
+
+  const byStatus = await db
+    .from('enrollments')
+    .select('id, status')
+    .eq('course_id', courseId)
+    .eq('user_id', userId)
+    .limit(1)
+
+  if (!byStatus.error) {
+    return (byStatus.data || []).some((enrollment) => activeStatuses.has(String(enrollment.status || '').toLowerCase()))
+  }
+
+  if (byStatus.error?.code !== '42703' && byStatus.error?.code !== 'PGRST204') {
+    throw byStatus.error
+  }
+
+  const { data, error } = await db
+    .from('enrollments')
+    .select('id')
+    .eq('course_id', courseId)
+    .eq('user_id', userId)
+    .limit(1)
+
+  if (error) throw error
+  return (data || []).length > 0
+}
+
 async function getCompatibleSlug(db, body) {
   try {
     return await ensureUniqueSlug(db, body.title || 'course', body.slug || null)
@@ -244,10 +273,21 @@ module.exports = async (req, res) => {
         if (courseError) throw courseError
         if (!foundCourse) return res.status(404).json({ error: 'course code not found' })
 
+        const existingEnrollment = await checkActiveEnrollment(db, userId, foundCourse.id)
+        if (existingEnrollment) {
+          const [enrichedCourse] = await enrichCourses([foundCourse])
+          return res.status(409).json({
+            error: 'You are already enrolled in this course.',
+            code: 'ALREADY_ENROLLED',
+            course: enrichedCourse,
+          })
+        }
+
         const { error: enrollmentError } = await db
           .from('enrollments')
           .upsert([{ course_id: foundCourse.id, user_id: userId, role: 'student' }], {
             onConflict: 'course_id,user_id',
+            ignoreDuplicates: true,
           })
 
         if (enrollmentError) throw enrollmentError

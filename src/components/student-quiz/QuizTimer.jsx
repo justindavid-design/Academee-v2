@@ -11,6 +11,10 @@ export function QuizTimer({ duration, isActive = true, onTimeUp = null }) {
   const [isWarning, setIsWarning] = useState(false)
 
   useEffect(() => {
+    setSecondsLeft(Math.max(0, Number(duration) || 0) * 60)
+  }, [duration])
+
+  useEffect(() => {
     if (!isActive || secondsLeft <= 0) return
 
     const interval = setInterval(() => {

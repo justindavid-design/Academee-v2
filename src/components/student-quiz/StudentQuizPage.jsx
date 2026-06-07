@@ -56,7 +56,6 @@ export default function StudentQuizPage() {
         {
           method: 'POST',
           body: JSON.stringify({
-            userId: user.id,
             answers: result.answers,
             score: result.score,
             total: result.total,

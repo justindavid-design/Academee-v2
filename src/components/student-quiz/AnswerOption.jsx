@@ -23,6 +23,7 @@ export function AnswerOption({
 
   const handleClick = () => {
     if (!isDisabled && onSelect) {
+      console.debug('[AnswerOption] click', { index, isDisabled })
       onSelect(index)
     }
   }
@@ -85,7 +86,7 @@ export function AnswerOption({
       aria-disabled={isDisabled}
       aria-label={`Answer option ${index + 1}${isSelected ? ', selected' : ''}${showFeedback && isCorrectSelection ? ', correct' : ''}`}
       data-speech-label={`Answer option ${index + 1}. ${text}`}
-      className={`relative w-full text-left px-5 py-4 rounded-2xl border-2 transition-all duration-200 font-medium text-base group ${
+      className={`relative z-10 pointer-events-auto w-full text-left px-5 py-4 rounded-2xl border-2 transition-all duration-200 font-medium text-base group ${
         getBaseStyle()
       } ${getHoverStyle()} ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
     >

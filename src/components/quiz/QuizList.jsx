@@ -4,6 +4,7 @@ import { apiFetch } from '../../lib/apiClient'
 import { getApiErrorMessage, safeJson } from '../courses/utils'
 import { Plus, Edit, Copy, Trash2, Eye, EyeOff, ChevronDown } from 'lucide-react'
 import ConfirmDialog from '../dashboard/ConfirmDialog'
+import { getQuizQuestionsSource } from './quizTypes'
 
 function formatDate(dateString) {
   if (!dateString) return 'No due date'
@@ -24,10 +25,9 @@ function QuizCard({ quiz, courseId, isTeacher, onRefresh }) {
   const [isLoading, setIsLoading] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, action: null })
 
-  const questionCount = quiz.questions ? Object.keys(quiz.questions).length : 0
-  const totalPoints = quiz.questions
-    ? Object.values(quiz.questions).reduce((sum, q) => sum + (q.points || 0), 0)
-    : 0
+  const questionSource = getQuizQuestionsSource(quiz)
+  const questionCount = quiz.question_count || questionSource.length
+  const totalPoints = questionSource.reduce((sum, q) => sum + (Number(q?.points) || 0), 0)
   const isPublished = quiz.status === 'published'
 
   const handleEdit = () => {
@@ -58,7 +58,7 @@ function QuizCard({ quiz, courseId, isTeacher, onRefresh }) {
     try {
       const newStatus = isPublished ? 'draft' : 'published'
       const res = await apiFetch(`/api/quizzes/${quiz.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })

@@ -7,6 +7,7 @@ export default function EnrollForm({
   onJoin,
   onCancel,
   loading = false,
+  enrolled = false,
 }) {
   return (
     <div className="max-w-xl space-y-4 rounded-lg border border-token bg-app p-5">
@@ -25,10 +26,10 @@ export default function EnrollForm({
         <button
           type="button"
           onClick={onJoin}
-          disabled={loading}
+          disabled={loading || enrolled}
           className="rounded-lg bg-[#111827] px-5 py-3 font-medium text-white hover:bg-[#374151] disabled:opacity-60"
         >
-          {loading ? 'Joining...' : 'Join'}
+          {enrolled ? 'Enrolled' : loading ? 'Joining...' : 'Join'}
         </button>
 
         <button type="button" onClick={onCancel} disabled={loading} className="rounded-lg border border-token bg-surface px-5 py-3 text-main hover-surface disabled:opacity-60">

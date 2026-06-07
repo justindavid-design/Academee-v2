@@ -1,9 +1,10 @@
 ﻿import React from 'react'
 import { motion } from 'framer-motion'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CheckSquare, CircleDot, FilePenLine, ListChecks, ToggleLeft } from 'lucide-react'
 import { quizTypes } from './quizTypes'
 import logo from '../../assets/logo.png'
+import CreateModeChoice from '../common/CreateModeChoice'
 
 const icons = {
   'multiple-choice': CircleDot,
@@ -16,6 +17,26 @@ const icons = {
 export default function QuizTypeSelector() {
   const navigate = useNavigate()
   const { courseId } = useParams()
+  const [searchParams] = useSearchParams()
+
+  const mode = searchParams.get('mode') || ''
+
+  if (mode !== 'manual') {
+    return (
+      <CreateModeChoice
+        title="How do you want to create this quiz?"
+        subtitle="Quiz creation"
+        backLabel="Back"
+        onBack={() => navigate(-1)}
+        onManual={() => navigate(`/dashboard/course/${courseId}/quiz/types?mode=manual`)}
+        onAi={() => navigate(`/dashboard/course/${courseId}/quiz/create?ai=1`)}
+        manualLabel="Create on my own"
+        aiLabel="Generate Quiz with AI"
+        manualDescription="Pick a quiz type first, then build each question yourself."
+        aiDescription="Jump into the AI quiz maker to generate a strong starting draft."
+      />
+    )
+  }
 
   const chooseType = (typeId) => {
     navigate(`/dashboard/course/${courseId}/quiz/create?type=${typeId}`)

@@ -15,24 +15,13 @@ export function QuizSubmitModal({
   onCancel = null,
   isSubmitting = false,
 }) {
-  if (!isOpen) return null
-
-  const unanswered = totalQuestions - answeredQuestions
   const dialogRef = useRef(null)
   const cancelButtonRef = useRef(null)
   const previousFocusRef = useRef(null)
 
-  const backdropVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1 },
-  }
-
-  const modalVariants = {
-    hidden: { scale: 0.95, opacity: 0, y: 20 },
-    show: { scale: 1, opacity: 1, y: 0 },
-  }
-
   useEffect(() => {
+    if (!isOpen) return undefined
+
     previousFocusRef.current = document.activeElement
 
     const handleKeyDown = (event) => {
@@ -68,7 +57,21 @@ export function QuizSubmitModal({
       document.removeEventListener('keydown', handleKeyDown)
       previousFocusRef.current?.focus?.()
     }
-  }, [onCancel])
+  }, [isOpen, onCancel])
+
+  if (!isOpen) return null
+
+  const unanswered = totalQuestions - answeredQuestions
+
+  const backdropVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1 },
+  }
+
+  const modalVariants = {
+    hidden: { scale: 0.95, opacity: 0, y: 20 },
+    show: { scale: 1, opacity: 1, y: 0 },
+  }
 
   return (
     <motion.div
@@ -76,7 +79,7 @@ export function QuizSubmitModal({
       initial="hidden"
       animate="show"
       exit="hidden"
-      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
     >
       <motion.div
         variants={modalVariants}
@@ -87,37 +90,35 @@ export function QuizSubmitModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="quiz-submit-title"
-        className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4"
+        className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-xl"
       >
-        {/* Icon and title */}
         {unanswered > 0 ? (
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
-              <AlertCircle className="w-5 h-5 text-orange-600" />
+            <div className="flex-shrink-0 rounded-lg bg-orange-100 p-2">
+              <AlertCircle className="h-5 w-5 text-orange-600" />
             </div>
             <div>
               <h2 id="quiz-submit-title" className="font-bold text-slate-900">Unanswered Questions</h2>
-              <p className="text-sm text-slate-600 mt-1">
+              <p className="mt-1 text-sm text-slate-600">
                 You have {unanswered} question{unanswered !== 1 ? 's' : ''} that {unanswered === 1 ? 'is' : 'are'} not answered.
               </p>
             </div>
           </div>
         ) : (
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-              <Send className="w-5 h-5 text-blue-600" />
+            <div className="flex-shrink-0 rounded-lg bg-blue-100 p-2">
+              <Send className="h-5 w-5 text-blue-600" />
             </div>
             <div>
               <h2 id="quiz-submit-title" className="font-bold text-slate-900">Ready to Submit?</h2>
-              <p className="text-sm text-slate-600 mt-1">
+              <p className="mt-1 text-sm text-slate-600">
                 All {totalQuestions} questions answered. Submit your quiz now.
               </p>
             </div>
           </div>
         )}
 
-        {/* Summary */}
-        <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1 border border-slate-100">
+        <div className="space-y-1 rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm">
           <div className="flex justify-between text-slate-600">
             <span>Total Questions:</span>
             <span className="font-semibold">{totalQuestions}</span>
@@ -134,36 +135,34 @@ export function QuizSubmitModal({
           )}
         </div>
 
-        {/* Message */}
         <p className="text-sm text-slate-600">
           {unanswered > 0
             ? 'Do you want to continue reviewing or submit anyway?'
             : 'You cannot change your answers after submitting.'}
         </p>
 
-        {/* Buttons */}
         <div className="flex gap-3 pt-2">
           <button
             ref={cancelButtonRef}
             onClick={onCancel}
             disabled={isSubmitting}
-            className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-slate-900 font-medium hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="flex-1 rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-900 transition-colors hover:bg-slate-50 disabled:opacity-50"
           >
             {unanswered > 0 ? 'Keep Reviewing' : 'Continue'}
           </button>
           <button
             onClick={onConfirm}
             disabled={isSubmitting}
-            className="flex-1 px-4 py-2 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
           >
             {isSubmitting ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 <span>Submitting...</span>
               </>
             ) : (
               <>
-                <Send className="w-4 h-4" />
+                <Send className="h-4 w-4" />
                 <span>Submit Quiz</span>
               </>
             )}
@@ -173,3 +172,5 @@ export function QuizSubmitModal({
     </motion.div>
   )
 }
+
+export default QuizSubmitModal

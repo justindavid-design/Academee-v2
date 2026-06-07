@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   ToggleLeft,
 } from 'lucide-react'
 import { reviewerTypes } from './reviewerTypes'
+import CreateModeChoice from '../common/CreateModeChoice'
 
 const icons = {
   ClipboardCheck,
@@ -29,7 +30,26 @@ const icons = {
 export default function ReviewerTypeSelector() {
   const navigate = useNavigate()
   const { courseId } = useParams()
+  const [searchParams] = useSearchParams()
   const [selected, setSelected] = useState('')
+  const mode = searchParams.get('mode') || ''
+
+  if (mode !== 'manual') {
+    return (
+      <CreateModeChoice
+        title="How do you want to create this reviewer?"
+        subtitle="Reviewer creation"
+        backLabel="Back"
+        onBack={() => navigate(-1)}
+        onManual={() => navigate(`/dashboard/course/${courseId}/reviewer/types?mode=manual`)}
+        onAi={() => navigate('/reviewers')}
+        manualLabel="Create on my own"
+        aiLabel="Create with AI"
+        manualDescription="Choose a reviewer type and build the study set yourself."
+        aiDescription="Open the AI reviewer studio to generate a quicker first draft."
+      />
+    )
+  }
 
   const chooseType = (typeId) => {
     setSelected(typeId)

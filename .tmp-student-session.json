@@ -1,0 +1,58 @@
+{
+  "email": "quizstudent_1780753620523@example.com",
+  "user": {
+    "id": "3a30e34b-a9e0-4442-b0eb-3b5c560b0d81",
+    "email": "quizstudent_1780753620523@example.com",
+    "display_name": "Quiz Student"
+  },
+  "session": {
+    "access_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjRhMWQyZDI5LTdkMzQtNDIxMi1iY2M5LTBkMGNmZTE1NzhhMiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2RmYnRyaHV2bGZucnZ5cHl3dmtmLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIzYTMwZTM0Yi1hOWUwLTQ0NDItYjBlYi0zYjVjNTYwYjBkODEiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzgwNzU3MjI0LCJpYXQiOjE3ODA3NTM2MjQsImVtYWlsIjoicXVpenN0dWRlbnRfMTc4MDc1MzYyMDUyM0BleGFtcGxlLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZGlzcGxheV9uYW1lIjoiUXVpeiBTdHVkZW50IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImZ1bGxfbmFtZSI6IlF1aXogU3R1ZGVudCJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzgwNzUzNjI0fV0sInNlc3Npb25faWQiOiIyZGUzMDY2NS1mODg4LTRjZWUtODg1YS04M2NjMWRiOTM2MDQiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.idZZ3QNesuh8jH7n76JEzvUQFSLvozsDr1NO9XK-5dvPdBkSVxlag1iLmgWLgjyJKSx5DHdvXyYWJSxO547v6g",
+    "token_type": "bearer",
+    "expires_in": 3600,
+    "expires_at": 1780757224,
+    "refresh_token": "dudxhwumgjfz",
+    "user": {
+      "id": "3a30e34b-a9e0-4442-b0eb-3b5c560b0d81",
+      "aud": "authenticated",
+      "role": "authenticated",
+      "email": "quizstudent_1780753620523@example.com",
+      "email_confirmed_at": "2026-06-06T13:47:02.237657Z",
+      "phone": "",
+      "confirmed_at": "2026-06-06T13:47:02.237657Z",
+      "last_sign_in_at": "2026-06-06T13:47:04.14604764Z",
+      "app_metadata": {
+        "provider": "email",
+        "providers": [
+          "email"
+        ]
+      },
+      "user_metadata": {
+        "display_name": "Quiz Student",
+        "email_verified": true,
+        "full_name": "Quiz Student"
+      },
+      "identities": [
+        {
+          "identity_id": "c93e7164-61aa-490c-a97f-96bc6e4624f5",
+          "id": "3a30e34b-a9e0-4442-b0eb-3b5c560b0d81",
+          "user_id": "3a30e34b-a9e0-4442-b0eb-3b5c560b0d81",
+          "identity_data": {
+            "email": "quizstudent_1780753620523@example.com",
+            "email_verified": false,
+            "phone_verified": false,
+            "sub": "3a30e34b-a9e0-4442-b0eb-3b5c560b0d81"
+          },
+          "provider": "email",
+          "last_sign_in_at": "2026-06-06T13:47:02.226367Z",
+          "created_at": "2026-06-06T13:47:02.226422Z",
+          "updated_at": "2026-06-06T13:47:02.226422Z",
+          "email": "quizstudent_1780753620523@example.com"
+        }
+      ],
+      "created_at": "2026-06-06T13:47:02.215185Z",
+      "updated_at": "2026-06-06T13:47:04.195842Z",
+      "is_anonymous": false
+    },
+    "weak_password": null
+  }
+}

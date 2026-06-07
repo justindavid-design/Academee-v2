@@ -22,6 +22,7 @@ export default function CourseModalOverlay() {
   const [courseMsg, setCourseMsg] = useState('')
   const [enrollCode, setEnrollCode] = useState('')
   const [saving, setSaving] = useState(false)
+  const [alreadyEnrolled, setAlreadyEnrolled] = useState(false)
 
   const clearMessage = () => {
     setCourseMsg('')
@@ -30,6 +31,7 @@ export default function CourseModalOverlay() {
   useEffect(() => {
     if (showCreateForm || showEnrollForm) {
       setCourseMsg('')
+      setAlreadyEnrolled(false)
     }
   }, [showCreateForm, showEnrollForm])
 
@@ -129,6 +131,7 @@ export default function CourseModalOverlay() {
 
     try {
       setSaving(true)
+      setAlreadyEnrolled(false)
       clearMessage()
 
       const res = await apiFetch('/api/courses', {
@@ -141,6 +144,9 @@ export default function CourseModalOverlay() {
 
       if (!res.ok) {
         setCourseMsg(getApiErrorMessage(data, 'We could not find that course code.'))
+        if (data?.code === 'ALREADY_ENROLLED') {
+          setAlreadyEnrolled(true)
+        }
         return
       }
 
@@ -219,6 +225,7 @@ export default function CourseModalOverlay() {
                 onJoin={handleJoinCourse}
                 onCancel={closeEnroll}
                 loading={saving}
+                enrolled={alreadyEnrolled}
               />
             )}
           </div>

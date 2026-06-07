@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   AnalyticsOutlined,
-  AutoAwesome,
-  ContentCopy,
   DeleteOutline,
   FactCheckOutlined,
   FileUploadOutlined,
@@ -10,7 +8,6 @@ import {
   SecurityOutlined,
   VisibilityOutlined,
 } from '@mui/icons-material'
-import { toast } from '../../lib/ToastProvider'
 import TeacherAnalytics from '../analytics/TeacherAnalytics'
 import { buildTeacherAnalytics } from '../../lib/quizAnalytics'
 import AIWorkflowPanel from '../ai/AIWorkflowPanel'
@@ -31,6 +28,211 @@ const questionTypes = [
 const bloomLevels = ['Recall', 'Application', 'Analysis']
 
 const acceptedFormats = ['PDF', 'DOCX', 'PPTX', 'TXT', 'Images (OCR)']
+
+function normalizeText(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function normalizeQuestionType(type, fallback = 'Multiple Choice') {
+  const normalized = normalizeText(type)
+  const typeMap = {
+    'multiple choice': 'Multiple Choice',
+    'multiple-choice': 'Multiple Choice',
+    mcq: 'Multiple Choice',
+    'true or false': 'True or False',
+    'true-false': 'True or False',
+    'true false': 'True or False',
+    identification: 'Identification',
+    'fill in the blank': 'Identification',
+    'fill-in-the-blank': 'Identification',
+    hots: 'Essay',
+    essay: 'Essay',
+    'coding': 'Coding Questions',
+    'coding questions': 'Coding Questions',
+    'coding-question': 'Coding Questions',
+    'matching type': 'Matching Type',
+    'matching-type': 'Matching Type',
+  }
+
+  return typeMap[normalized] || fallback
+}
+
+function normalizeDifficulty(difficulty) {
+  const normalized = normalizeText(difficulty)
+  if (['easy', 'medium', 'hard'].includes(normalized)) {
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+  }
+  return 'Medium'
+}
+
+function getChoiceText(choice) {
+  if (typeof choice === 'string') return choice
+  if (!choice || typeof choice !== 'object') return ''
+  return choice.text || choice.label || choice.value || choice.choice || ''
+}
+
+function getChoiceFeedback(choice) {
+  if (!choice || typeof choice !== 'object') return ''
+  return choice.feedback || choice.explanation || ''
+}
+
+function isTruthyFlag(value) {
+  return value === true || value === 1 || value === '1' || value === 'true' || value === 'yes'
+}
+
+function createOption(text = '', correct = false, feedback = '') {
+  return { text, correct, feedback }
+}
+
+function buildFallbackOptions(type) {
+  if (type === 'True or False') {
+    return [
+      createOption('True', true, 'Correct. This is the best answer.'),
+      createOption('False', false, 'This answer is not correct. Review the lesson concept and try again.'),
+    ]
+  }
+
+  return [
+    createOption('', true, 'Correct. This matches the key concept.'),
+    createOption('', false, 'This answer is not correct. Review the lesson concept and try again.'),
+    createOption('', false, 'This answer is not correct. Review the lesson concept and try again.'),
+    createOption('', false, 'This answer is not correct. Review the lesson concept and try again.'),
+  ]
+}
+
+function normalizeQuestionMatches(matches) {
+  if (!Array.isArray(matches) || !matches.length) {
+    return [
+      { left: '', right: '' },
+      { left: '', right: '' },
+    ]
+  }
+
+  return matches.map((pair) => ({
+    left: pair?.left || '',
+    right: pair?.right || '',
+  }))
+}
+
+function normalizeQuestionOptions(question, type) {
+  const sourceOptions = Array.isArray(question?.options) && question.options.length
+    ? question.options
+    : Array.isArray(question?.choices) && question.choices.length
+      ? question.choices
+      : []
+
+  if (type === 'Matching Type' || type === 'Essay' || type === 'Identification' || type === 'Coding Questions') {
+    return []
+  }
+
+  const correctAnswerText = normalizeText(question?.correctAnswer || question?.answer || '')
+
+  const options = sourceOptions
+    .map((option, index) => {
+      const text = getChoiceText(option)
+      const optionCorrect = typeof option === 'object' && option !== null
+        ? isTruthyFlag(option.correct)
+        : Boolean(correctAnswerText) && normalizeText(text) === correctAnswerText
+      const feedback = getChoiceFeedback(option) || (optionCorrect
+        ? 'Correct. This matches the key concept.'
+        : 'This answer is not correct. Review the lesson concept and try again.')
+
+      return createOption(text, optionCorrect, feedback)
+    })
+    .filter((option) => option.text || option.correct || option.feedback)
+
+  const fallback = buildFallbackOptions(type)
+  const normalizedOptions = options.length ? options : fallback
+
+  if (!normalizedOptions.some((option) => option.correct)) {
+    normalizedOptions[0] = { ...normalizedOptions[0], correct: true, feedback: normalizedOptions[0].feedback || 'Correct. This matches the key concept.' }
+  }
+
+  if (type === 'True or False') {
+    return normalizedOptions.slice(0, 2).map((option, index) => ({
+      ...option,
+      text: option.text || (index === 0 ? 'True' : 'False'),
+      feedback: option.feedback || (index === 0
+        ? 'Correct. This matches the key concept.'
+        : 'This answer is not correct. Review the lesson concept and try again.'),
+    }))
+  }
+
+  return normalizedOptions.map((option) => ({
+    ...option,
+    feedback: option.feedback || (option.correct
+      ? 'Correct. This matches the key concept.'
+      : 'This answer is not correct. Review the lesson concept and try again.'),
+  }))
+}
+
+function normalizeQuizMakerQuestion(question = {}, index = 0) {
+  const type = normalizeQuestionType(question.type)
+  const prompt = question.prompt || question.text || question.question || ''
+  const options = normalizeQuestionOptions(question, type)
+  const correctOption = options.find((option) => option.correct)
+  const correctText = correctOption?.text || question.correctAnswer || question.answer || ''
+  const answer = question.answer || correctText
+  const explanation = question.explanation || question.rubric || ''
+  const rubric = question.rubric || question.explanation || ''
+  const conceptTags = Array.isArray(question.conceptTags)
+    ? question.conceptTags.filter(Boolean)
+    : question.conceptTags
+      ? [question.conceptTags].filter(Boolean)
+      : []
+
+  return {
+    id: question.id || `quiz-question-${index + 1}`,
+    type,
+    bloom: question.bloom || 'Recall',
+    difficulty: normalizeDifficulty(question.difficulty),
+    prompt,
+    text: question.text || prompt,
+    question: question.question || prompt,
+    alt_text: question.alt_text || '',
+    options,
+    choices: options.map((option) => option.text).filter(Boolean),
+    answer,
+    correctAnswer: question.correctAnswer || correctText,
+    explanation,
+    trivia: question.trivia || '',
+    learningTip: question.learningTip || question.hint || '',
+    hint: question.hint || '',
+    rubric,
+    conceptTags,
+    codeLanguage: question.codeLanguage || 'javascript',
+    testCases: question.testCases || '',
+    matches: normalizeQuestionMatches(question.matches),
+  }
+}
+
+function normalizeQuizMakerQuestions(questions) {
+  return Array.isArray(questions) ? questions.map((question, index) => normalizeQuizMakerQuestion(question, index)) : []
+}
+
+function normalizeQuizMakerDraft(draft) {
+  const current = draft && typeof draft === 'object' ? draft : {}
+  const questions = normalizeQuizMakerQuestions(current.questions)
+
+  return {
+    ...defaultDraft,
+    ...current,
+    timer: Number(current.timer) || defaultDraft.timer,
+    attempts: Number(current.attempts) || defaultDraft.attempts,
+    count: Number(current.count) || defaultDraft.count,
+    questions: questions.length ? questions : [normalizeQuizMakerQuestion(emptyQuestion())],
+  }
+}
+
+function getCorrectOptionIndex(question) {
+  if (!Array.isArray(question?.options) || !question.options.length) return -1
+  const correctIndex = question.options.findIndex((option) => option.correct)
+  if (correctIndex >= 0) return correctIndex
+
+  const target = normalizeText(question.correctAnswer || question.answer || '')
+  if (!target) return -1
+  return question.options.findIndex((option) => normalizeText(option.text) === target)
+}
 
 function emptyQuestion(type = 'Multiple Choice') {
   return {
@@ -156,9 +358,9 @@ function generatedQuestionsFromTopic(topic, count, scanSummary) {
 export default function QuizMaker() {
   const [draft, setDraft] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('academee_quiz_maker_draft') || 'null') || defaultDraft
+      return normalizeQuizMakerDraft(JSON.parse(localStorage.getItem('academee_quiz_maker_draft') || 'null'))
     } catch (_e) {
-      return defaultDraft
+      return normalizeQuizMakerDraft(defaultDraft)
     }
   })
   const [activeTab, setActiveTab] = useState('builder')
@@ -175,17 +377,29 @@ export default function QuizMaker() {
   const update = (patch) => setDraft((current) => ({ ...current, ...patch }))
 
   const updateQuestion = (id, patch) => {
-    update({
-      questions: draft.questions.map((question) => (question.id === id ? { ...question, ...patch } : question)),
-    })
+    setDraft((current) => ({
+      ...current,
+      questions: current.questions.map((question, index) => {
+        if (question.id !== id) return normalizeQuizMakerQuestion(question, index)
+        return normalizeQuizMakerQuestion({ ...question, ...patch, id }, index)
+      }),
+    }))
   }
 
   const addQuestion = (type = 'Multiple Choice') => {
-    update({ questions: [...draft.questions, emptyQuestion(type)] })
+    setDraft((current) => ({
+      ...current,
+      questions: [...current.questions, normalizeQuizMakerQuestion(emptyQuestion(type), current.questions.length)],
+    }))
   }
 
   const removeQuestion = (id) => {
-    update({ questions: draft.questions.length > 1 ? draft.questions.filter((question) => question.id !== id) : draft.questions })
+    setDraft((current) => ({
+      ...current,
+      questions: current.questions.length > 1
+        ? current.questions.filter((question) => question.id !== id)
+        : current.questions,
+    }))
   }
 
   const handleFiles = async (files) => {
@@ -214,10 +428,7 @@ export default function QuizMaker() {
       content: scanSummary ? [scanSummary.concepts.join(' '), scanSummary.definitions.join('\n'), scanSummary.formulas.join('\n')].filter(Boolean).join('\n') : draft.topic,
       files: scanSummary?.files?.map((name) => ({ name })) || [],
     }
-    const questions = buildAiQuiz({ source, count: draft.count }).map((question) => ({
-      ...question,
-      prompt: question.question,
-    }))
+    const questions = normalizeQuizMakerQuestions(buildAiQuiz({ source, count: draft.count }))
     update({
       questions,
       description: draft.description || 'AI-generated adaptive quiz draft. Review before publishing.',
@@ -225,35 +436,37 @@ export default function QuizMaker() {
     setActiveTab('preview')
   }
 
+  const quizQuestions = useMemo(() => normalizeQuizMakerQuestions(draft.questions), [draft.questions])
+
   const analytics = useMemo(() => {
-    const counts = draft.questions.reduce((acc, question) => {
+    const counts = quizQuestions.reduce((acc, question) => {
       acc[question.type] = (acc[question.type] || 0) + 1
       return acc
     }, {})
     return {
-      total: draft.questions.length,
-      adaptiveItems: draft.questions.filter((question) => question.options?.some((option) => option.feedback)).length,
-      highDifficulty: draft.questions.filter((question) => question.difficulty === 'Hard').length,
+      total: quizQuestions.length,
+      adaptiveItems: quizQuestions.filter((question) => question.options?.some((option) => option.feedback)).length,
+      highDifficulty: quizQuestions.filter((question) => question.difficulty === 'Hard').length,
       typeSummary: Object.entries(counts).map(([type, count]) => `${type}: ${count}`).join(', '),
     }
-  }, [draft.questions])
+  }, [quizQuestions])
 
   const teacherAnalytics = useMemo(() => {
-    const normalizedQuestions = draft.questions.map((question, index) => ({
+    const normalizedQuestions = quizQuestions.map((question, index) => ({
       id: question.id || `draft-${index + 1}`,
-      text: question.prompt || question.text || `Question ${index + 1}`,
+      text: question.prompt || question.text || question.question || `Question ${index + 1}`,
       options: Array.isArray(question.options)
         ? question.options.map((option) => (typeof option === 'string' ? option : option.text || ''))
         : [],
-      correct: Array.isArray(question.options)
-        ? Math.max(0, question.options.findIndex((option) => option.correct))
-        : 0,
-      conceptTags: [question.topic, question.bloom, question.difficulty].filter(Boolean),
+      correct: Math.max(0, getCorrectOptionIndex(question)),
+      conceptTags: (Array.isArray(question.conceptTags) && question.conceptTags.length
+        ? question.conceptTags
+        : [question.topic, question.bloom, question.difficulty].filter(Boolean)),
       difficulty: question.difficulty,
     }))
 
     return buildTeacherAnalytics(normalizedQuestions, [])
-  }, [draft.questions])
+  }, [quizQuestions])
 
   const flashcards = useMemo(() => {
     const source = {
@@ -279,30 +492,6 @@ export default function QuizMaker() {
     })
   }, [teacherAnalytics, scanSummary, draft.title])
 
-  const exportJson = {
-    title: draft.title,
-    description: draft.description,
-    settings: {
-      timer_minutes: Number(draft.timer),
-      attempts_limit: Number(draft.attempts),
-      randomize_questions: draft.randomizeQuestions,
-      randomize_options: draft.randomizeOptions,
-      question_bank: draft.questionBank,
-      accessibility: {
-        speech_to_text: draft.speechSupport,
-        text_to_speech: draft.speechSupport,
-        large_typography: draft.largeTypography,
-        colorblind_friendly: draft.colorblindSafe,
-      },
-      security: {
-        browser_lockdown: draft.browserLockdown,
-        tab_switch_detection: draft.tabSwitchDetection,
-        plagiarism_detection: draft.plagiarismDetection,
-      },
-    },
-    questions: draft.questions,
-  }
-
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
@@ -312,7 +501,7 @@ export default function QuizMaker() {
               <Pill tone="dark">AI Quiz Maker</Pill>
               <h1 className="mt-4 text-4xl font-black tracking-tight text-main">Build adaptive assessments faster</h1>
               <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-muted">
-                Create quizzes manually, scan learning files, generate AI-assisted items, preview the student experience, and export structured adaptive quiz JSON.
+                Create quizzes manually, scan learning files, generate AI-assisted items, preview the student experience, and prepare adaptive quizzes for publishing.
               </p>
             </div>
             <button type="button" onClick={generateQuiz} className="rounded-2xl primary-btn px-5 py-3 text-sm font-black">
@@ -342,7 +531,7 @@ export default function QuizMaker() {
       />
 
       <div className="flex flex-wrap gap-2">
-        {['builder', 'files', 'preview', 'analytics', 'export'].map((tab) => (
+        {['builder', 'files', 'preview', 'analytics'].map((tab) => (
           <button
             key={tab}
             type="button"
@@ -381,7 +570,7 @@ export default function QuizMaker() {
             </div>
 
             <div className="mt-5 space-y-4">
-              {draft.questions.map((question, index) => (
+              {quizQuestions.map((question, index) => (
                 <QuestionEditor
                   key={question.id}
                   index={index}
@@ -434,20 +623,20 @@ export default function QuizMaker() {
             <h2 className="text-xl font-black text-main">Real-time student preview</h2>
           </div>
           <div className="space-y-4">
-            {draft.questions.map((question, index) => (
+            {quizQuestions.map((question, index) => (
               <div key={question.id} className="rounded-[22px] border border-token bg-surface p-4">
                 <div className="flex flex-wrap gap-2">
                   <Pill>{question.type}</Pill>
                   <Pill tone="light">{question.bloom}</Pill>
                   <Pill tone="light">{question.difficulty}</Pill>
                 </div>
-                <h3 className="mt-4 text-lg font-black text-black">{index + 1}. {question.prompt || 'Untitled question'}</h3>
+                <h3 className="mt-4 text-lg font-black text-black">{index + 1}. {question.prompt || question.text || question.question || 'Untitled question'}</h3>
                 {question.alt_text ? <p className="mt-2 text-xs font-semibold text-muted">Alt text: {question.alt_text}</p> : null}
                 {question.type === 'Multiple Choice' || question.type === 'True or False' ? (
                   <div className="mt-4 grid gap-2">
                     {question.options.map((option, optionIndex) => (
                       <div key={optionIndex} className="rounded-2xl border border-token bg-surface p-3">
-                        <p className="text-sm font-bold text-main">{String.fromCharCode(65 + optionIndex)}. {option.text || 'Option text'}</p>
+                        <p className="text-sm font-bold text-main">{String.fromCharCode(65 + optionIndex)}. {getChoiceText(option) || 'Option text'}</p>
                         {!option.correct ? <p className="mt-1 text-xs font-semibold text-main">Adaptive feedback: {option.feedback}</p> : null}
                       </div>
                     ))}
@@ -479,7 +668,7 @@ export default function QuizMaker() {
           <div className="mt-5 grid gap-4 md:grid-cols-4">
             <Metric icon={<AnalyticsOutlined />} label="Total questions" value={analytics.total} />
             <Metric icon={<PsychologyAltOutlined />} label="Adaptive items" value={analytics.adaptiveItems} />
-            <Metric icon={<FactCheckOutlined />} label="Question mix" value={draft.questions.length ? `${new Set(draft.questions.map((q) => q.type)).size} types` : '0'} />
+            <Metric icon={<FactCheckOutlined />} label="Question mix" value={quizQuestions.length ? `${new Set(quizQuestions.map((q) => q.type)).size} types` : '0'} />
             <Metric icon={<SecurityOutlined />} label="Integrity" value={draft.tabSwitchDetection ? 'On' : 'Off'} />
           </div>
           <div className="mt-5 grid gap-4 lg:grid-cols-3">
@@ -501,23 +690,6 @@ export default function QuizMaker() {
         </Panel>
       ) : null}
 
-      {activeTab === 'export' ? (
-        <Panel>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-black text-black">Structured adaptive quiz JSON</h2>
-            <button
-              type="button"
-              onClick={() => toast.copy(JSON.stringify(exportJson, null, 2), 'Quiz JSON copied to clipboard')}
-              className="inline-flex items-center gap-2 rounded-2xl primary-btn px-4 py-2 text-sm font-black"
-            >
-              <ContentCopy sx={{ fontSize: 18 }} /> Copy JSON
-            </button>
-          </div>
-          <pre className="max-h-[520px] overflow-auto rounded-[20px] bg-black p-4 text-xs leading-6 text-emerald-200">
-            {JSON.stringify(exportJson, null, 2)}
-          </pre>
-        </Panel>
-      ) : null}
     </div>
   )
 }
@@ -542,10 +714,20 @@ function Field({ label, children }) {
 }
 
 function QuestionEditor({ question, index, onChange, onRemove }) {
+  const promptValue = question.prompt || question.text || question.question || ''
+
   const setOption = (optionIndex, patch) => {
-    onChange({
-      options: question.options.map((option, index) => (index === optionIndex ? { ...option, ...patch } : option)),
-    })
+    const nextOptions = question.options.map((option, index) => (index === optionIndex ? { ...option, ...patch } : option))
+    const currentOption = question.options[optionIndex] || {}
+    const nextPatch = { options: nextOptions }
+
+    if (currentOption.correct || patch.correct) {
+      const selectedText = nextOptions.find((option) => option.correct)?.text || nextOptions[optionIndex]?.text || ''
+      nextPatch.answer = selectedText
+      nextPatch.correctAnswer = selectedText
+    }
+
+    onChange(nextPatch)
   }
 
   return (
@@ -562,7 +744,7 @@ function QuestionEditor({ question, index, onChange, onRemove }) {
         <Field label="Difficulty"><select className="input-base" value={question.difficulty} onChange={(e) => onChange({ difficulty: e.target.value })}>{['Easy', 'Medium', 'Hard'].map((level) => <option key={level}>{level}</option>)}</select></Field>
       </div>
       <div className="mt-3 grid gap-3">
-        <Field label="Prompt"><textarea className="input-base min-h-[90px]" value={question.prompt} onChange={(e) => onChange({ prompt: e.target.value })} /></Field>
+        <Field label="Prompt"><textarea className="input-base min-h-[90px]" value={promptValue} onChange={(e) => onChange({ prompt: e.target.value, text: e.target.value, question: e.target.value })} /></Field>
         <Field label="Alt text for screen readers"><input className="input-base" value={question.alt_text} onChange={(e) => onChange({ alt_text: e.target.value })} /></Field>
       </div>
 
@@ -571,7 +753,24 @@ function QuestionEditor({ question, index, onChange, onRemove }) {
           {question.options.map((option, optionIndex) => (
             <div key={optionIndex} className="grid gap-2 rounded-2xl bg-white p-3">
               <div className="flex items-center gap-3">
-                <input type="radio" checked={option.correct} onChange={() => onChange({ options: question.options.map((item, index) => ({ ...item, correct: index === optionIndex })) })} />
+                <input
+                  type="radio"
+                  checked={option.correct}
+                  onChange={() => {
+                    const selectedText = option.text || ''
+                    onChange({
+                      options: question.options.map((item, index) => ({
+                        ...item,
+                        correct: index === optionIndex,
+                        feedback: index === optionIndex
+                          ? item.feedback || 'Correct. This matches the key concept.'
+                          : item.feedback || 'This answer is not correct. Review the lesson concept and try again.',
+                      })),
+                      answer: selectedText,
+                      correctAnswer: selectedText,
+                    })
+                  }}
+                />
                 <input className="input-base" value={option.text} onChange={(e) => setOption(optionIndex, { text: e.target.value })} placeholder={`Option ${String.fromCharCode(65 + optionIndex)}`} />
               </div>
               {!option.correct ? <textarea className="input-base min-h-[70px]" value={option.feedback} onChange={(e) => setOption(optionIndex, { feedback: e.target.value })} placeholder="Specific adaptive feedback for this wrong answer" /> : null}
@@ -600,7 +799,24 @@ function QuestionEditor({ question, index, onChange, onRemove }) {
       ) : null}
 
       <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <Field label="Answer key"><textarea className="input-base min-h-[80px]" value={question.answer} onChange={(e) => onChange({ answer: e.target.value })} /></Field>
+        <Field label="Answer key"><textarea className="input-base min-h-[80px]" value={question.answer || question.correctAnswer || ''} onChange={(e) => {
+          const value = e.target.value
+          const nextPatch = { answer: value, correctAnswer: value }
+          if (question.type === 'Multiple Choice' || question.type === 'True or False') {
+            const target = normalizeText(value)
+            nextPatch.options = question.options.map((option, optionIndex) => ({
+              ...option,
+              correct: normalizeText(option.text) === target,
+              feedback: normalizeText(option.text) === target
+                ? option.feedback || 'Correct. This matches the key concept.'
+                : option.feedback || 'This answer is not correct. Review the lesson concept and try again.',
+            }))
+            if (!nextPatch.options.some((option) => option.correct) && nextPatch.options.length) {
+              nextPatch.options[0] = { ...nextPatch.options[0], correct: true }
+            }
+          }
+          onChange(nextPatch)
+        }} /></Field>
         <Field label="Hint"><textarea className="input-base min-h-[80px]" value={question.hint} onChange={(e) => onChange({ hint: e.target.value })} /></Field>
         <Field label="Explanation or rubric"><textarea className="input-base min-h-[80px]" value={question.explanation || question.rubric} onChange={(e) => onChange({ explanation: e.target.value, rubric: e.target.value })} /></Field>
       </div>

@@ -7,30 +7,20 @@ import React, { useMemo } from 'react'
 import { QuizFeedbackPanel } from './QuizFeedbackPanel'
 import { buildDetailedFeedback } from '../../lib/quizFeedbackUtils'
 
-/**
- * Layout modes for feedback display
- */
 export const FeedbackLayout = {
-  PANEL: 'panel', // Full panel with all feedback types
-  CARD: 'card', // Compact card format
-  INLINE: 'inline', // Inline with question
-  MINIMAL: 'minimal', // Just explanation
+  PANEL: 'panel',
+  CARD: 'card',
+  INLINE: 'inline',
+  MINIMAL: 'minimal',
 }
 
-/**
- * Quiz modes affect what/when feedback is shown
- */
 export const QuizMode = {
-  PRACTICE: 'practice', // Show feedback immediately
-  STUDY: 'study', // Expanded feedback with hints and explanations
-  EXAM: 'exam', // Show feedback after quiz ends
-  REVIEW: 'review', // Show all feedback for review
+  PRACTICE: 'practice',
+  STUDY: 'study',
+  EXAM: 'exam',
+  REVIEW: 'review',
 }
 
-/**
- * Adaptive feedback renderer
- * Intelligently displays feedback based on question data and mode
- */
 export function AdaptiveFeedbackRenderer({
   question,
   selectedAnswerIndex,
@@ -50,14 +40,13 @@ export function AdaptiveFeedbackRenderer({
     [feedbackOverride, question, selectedAnswerIndex]
   )
 
-  // Should we show feedback based on mode?
   const shouldShow = useMemo(() => {
     switch (mode) {
       case QuizMode.PRACTICE:
       case QuizMode.STUDY:
         return showAutomatically || !!feedback
       case QuizMode.EXAM:
-        return false // Hidden until quiz ends
+        return false
       case QuizMode.REVIEW:
         return !!feedback
       default:
@@ -69,7 +58,6 @@ export function AdaptiveFeedbackRenderer({
     return null
   }
 
-  // Render based on layout
   switch (layout) {
     case FeedbackLayout.PANEL:
       return (
@@ -97,9 +85,6 @@ export function AdaptiveFeedbackRenderer({
   }
 }
 
-/**
- * Compact card layout
- */
 function CompactFeedbackCard({ feedback, onContinue }) {
   return (
     <div
@@ -109,18 +94,18 @@ function CompactFeedbackCard({ feedback, onContinue }) {
           : 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900'
       }`}
     >
-      <div className='flex items-start justify-between gap-4'>
-        <div className='flex-1'>
-          <h3 className='font-semibold mb-1'>{feedback.status}</h3>
-          <p className='text-sm mb-2'>{feedback.explanation}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <h3 className="mb-1 font-semibold">{feedback.status}</h3>
+          <p className="mb-2 text-sm">{feedback.explanation}</p>
           {feedback.learningTip && (
-            <p className='text-sm italic opacity-75'>💡 {feedback.learningTip}</p>
+            <p className="text-sm italic opacity-75">Tip: {feedback.learningTip}</p>
           )}
         </div>
         {onContinue && (
           <button
             onClick={onContinue}
-            className='mt-1 flex-shrink-0 rounded bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700'
+            className="mt-1 flex-shrink-0 rounded bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
           >
             Next
           </button>
@@ -130,9 +115,6 @@ function CompactFeedbackCard({ feedback, onContinue }) {
   )
 }
 
-/**
- * Inline feedback (minimal space)
- */
 function InlineFeedback({ feedback }) {
   return (
     <div
@@ -142,17 +124,14 @@ function InlineFeedback({ feedback }) {
           : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
       }`}
     >
-      <strong>{feedback.statusIcon}</strong> {feedback.explanation}
+      <strong>{feedback.status}</strong> {feedback.explanation}
     </div>
   )
 }
 
-/**
- * Minimal feedback (just explanation)
- */
 function MinimalFeedback({ feedback }) {
   return (
-    <div className='mb-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 p-3 text-sm dark:bg-blue-900 dark:text-blue-100'>
+    <div className="mb-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 p-3 text-sm dark:bg-blue-900 dark:text-blue-100">
       <p>{feedback.explanation}</p>
     </div>
   )

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, XCircle, BarChart3, Award } from 'lucide-react'
+import { ArrowLeft, Award, BarChart3, CheckCircle2, XCircle } from 'lucide-react'
 import QuizSummary from '../analytics/QuizSummary'
 import StudentAnalytics from '../analytics/StudentAnalytics'
 import { buildStudentAnalyticsFromResult } from '../../lib/quizAnalytics'
@@ -19,8 +19,9 @@ export function QuizResults({
   showExplanations = true,
   onReview = null,
   onRetry = null,
+  onExit = null,
 }) {
-  const percentage = (score / totalQuestions) * 100
+  const percentage = totalQuestions > 0 ? (score / totalQuestions) * 100 : 0
   const passed = percentage >= passThreshold * 100
   const percentageRounded = Math.round(percentage)
 
@@ -64,32 +65,31 @@ export function QuizResults({
       animate="show"
       className="space-y-8"
     >
-      {/* Score display */}
       <motion.div
         variants={item}
-        className={`rounded-2xl p-8 text-center border-2 border-slate-200 ${gradeInfo.bgColor}`}
+        className={`rounded-2xl border-2 border-slate-200 p-8 text-center ${gradeInfo.bgColor}`}
       >
-        <div className="flex items-center justify-center gap-3 mb-4">
+        <div className="mb-4 flex items-center justify-center gap-3">
           {passed ? (
-            <CheckCircle2 className="w-8 h-8 text-green-600" />
+            <CheckCircle2 className="h-8 w-8 text-green-600" />
           ) : (
-            <XCircle className="w-8 h-8 text-red-600" />
+            <XCircle className="h-8 w-8 text-red-600" />
           )}
         </div>
 
         <h1 className={`text-5xl font-bold ${gradeInfo.color}`}>{percentageRounded}%</h1>
-        <p className="text-slate-600 mt-2">
+        <p className="mt-2 text-slate-600">
           You got {score} out of {totalQuestions} questions correct
         </p>
 
-        <div className={`inline-block mt-6 px-6 py-3 rounded-full font-bold text-lg ${gradeInfo.color} ${gradeInfo.bgColor}`}>
+        <div className={`mt-6 inline-block rounded-full px-6 py-3 text-lg font-bold ${gradeInfo.color} ${gradeInfo.bgColor}`}>
           Grade: {gradeInfo.grade}
         </div>
 
         <p className="mt-6 text-base text-slate-700">
           {passed
-            ? '🎉 Congratulations! You passed the quiz.'
-            : '📚 Keep practicing to improve your score!'}
+            ? 'Congratulations! You passed the quiz.'
+            : 'Keep practicing to improve your score!'}
         </p>
       </motion.div>
 
@@ -97,18 +97,17 @@ export function QuizResults({
 
       <StudentAnalytics analytics={analytics} />
 
-      {/* Performance breakdown */}
       <motion.div variants={item} className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-          <p className="text-sm text-slate-600 mb-2">Correct</p>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+          <p className="mb-2 text-sm text-slate-600">Correct</p>
           <p className="text-2xl font-bold text-green-600">{score}</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-          <p className="text-sm text-slate-600 mb-2">Incorrect</p>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+          <p className="mb-2 text-sm text-slate-600">Incorrect</p>
           <p className="text-2xl font-bold text-red-600">{totalQuestions - score}</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-          <p className="text-sm text-slate-600 mb-2">Accuracy</p>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+          <p className="mb-2 text-sm text-slate-600">Accuracy</p>
           <p className="text-2xl font-bold text-blue-600">{percentageRounded}%</p>
         </div>
       </motion.div>
@@ -141,7 +140,6 @@ export function QuizResults({
         </motion.div>
       )}
 
-      {/* Answer review */}
       {showExplanations && answers.length > 0 && (
         <motion.div variants={item} className="space-y-3">
           <h2 className="text-lg font-bold text-slate-900">Answer Review</h2>
@@ -160,11 +158,11 @@ export function QuizResults({
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-1">
+                  <div className="mt-1 flex-shrink-0">
                     {answer.isCorrect ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
                     ) : (
-                      <XCircle className="w-5 h-5 text-red-600" />
+                      <XCircle className="h-5 w-5 text-red-600" />
                     )}
                   </div>
 
@@ -174,16 +172,16 @@ export function QuizResults({
                     </p>
 
                     {answer.isCorrect ? (
-                      <p className="text-sm text-green-700 mt-2">
-                        ✓ Your answer: {answer.options?.[answer.chosen]}
+                      <p className="mt-2 text-sm text-green-700">
+                        Your answer: {answer.options?.[answer.chosen]}
                       </p>
                     ) : (
                       <div className="mt-2 space-y-1">
                         <p className="text-sm text-red-700">
-                          ✗ Your answer: {answer.options?.[answer.chosen] || 'Not answered'}
+                          Your answer: {answer.options?.[answer.chosen] || 'Not answered'}
                         </p>
                         <p className="text-sm text-green-700">
-                          ✓ Correct answer: {answer.options?.[answer.correct]}
+                          Correct answer: {answer.options?.[answer.correct]}
                         </p>
                       </div>
                     )}
@@ -195,24 +193,32 @@ export function QuizResults({
         </motion.div>
       )}
 
-      {/* Action buttons */}
-      <motion.div variants={item} className="flex gap-3 flex-col sm:flex-row">
+      <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row">
         {onReview && (
           <button
             onClick={onReview}
-            className="flex-1 px-6 py-3 rounded-lg border-2 border-slate-300 text-slate-900 font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-slate-300 px-6 py-3 font-medium text-slate-900 transition-colors hover:bg-slate-50"
           >
-            <BarChart3 className="w-5 h-5" />
+            <BarChart3 className="h-5 w-5" />
             Review Answers
           </button>
         )}
         {onRetry && (
           <button
             onClick={onRetry}
-            className="flex-1 px-6 py-3 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-500 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-600"
           >
-            <Award className="w-5 h-5" />
+            <Award className="h-5 w-5" />
             Try Again
+          </button>
+        )}
+        {onExit && (
+          <button
+            onClick={onExit}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-slate-300 px-6 py-3 font-medium text-slate-900 transition-colors hover:bg-slate-50"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            Exit Quiz
           </button>
         )}
       </motion.div>

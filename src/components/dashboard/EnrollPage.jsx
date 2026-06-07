@@ -13,6 +13,7 @@ export default function EnrollPage() {
   const [enrollCode, setEnrollCode] = useState('')
   const [enrollMsg, setEnrollMsg] = useState('')
   const [loading, setLoading] = useState(false)
+  const [alreadyEnrolled, setAlreadyEnrolled] = useState(false)
 
   const clearMessage = () => {
     setEnrollMsg('')
@@ -33,6 +34,7 @@ export default function EnrollPage() {
 
     try {
       setLoading(true)
+      setAlreadyEnrolled(false)
       clearMessage()
 
       const res = await apiFetch('/api/courses', {
@@ -45,6 +47,9 @@ export default function EnrollPage() {
 
       if (!res.ok) {
         setEnrollMsg(getApiErrorMessage(data, 'We could not find that course code.'))
+        if (data?.code === 'ALREADY_ENROLLED') {
+          setAlreadyEnrolled(true)
+        }
         return
       }
 
@@ -97,6 +102,8 @@ export default function EnrollPage() {
           enrollMsg=""
           onJoin={enrollToCourse}
           onCancel={handleCancel}
+          loading={loading}
+          enrolled={alreadyEnrolled}
         />
       </div>
 

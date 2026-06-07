@@ -5,13 +5,63 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '../../lib/AuthProvider'
 import { apiFetch } from '../../lib/apiClient'
 import { safeJson, getApiErrorMessage } from '../courses/utils'
-import { createQuizDraft, createQuizQuestion, normalizeQuizType, quizDraftKey } from './quizTypes'
+import { createQuizDraft, createQuizQuestion, getQuizQuestionsSource, getQuizSettings, normalizeQuizType, quizDraftKey } from './quizTypes'
 import { QuestionCard, QuizPreviewPanel, QuizSettingsSidebar } from './QuizBuilderLayout'
+import { generateQuiz as buildAiQuiz } from '../../ai/generateQuiz'
 
 function toApiType(type) {
   if (type === 'multi-select') return 'checkbox'
   if (type === 'fill-blank' || type === 'open-ended') return 'short-answer'
   return type
+}
+
+function normalizeAiQuestionType(type) {
+  const normalized = String(type || '').toLowerCase()
+  if (normalized.includes('true')) return 'true-false'
+  if (normalized.includes('identification') || normalized.includes('blank') || normalized.includes('short')) return 'fill-blank'
+  if (normalized.includes('essay') || normalized.includes('hots') || normalized.includes('open')) return 'open-ended'
+  if (normalized.includes('multi-select') || normalized.includes('checkbox')) return 'multi-select'
+  return 'multiple-choice'
+}
+
+function normalizeAiQuestion(question, index) {
+  const type = normalizeAiQuestionType(question.type)
+  const base = createQuizQuestion(type)
+  const prompt = String(question.question || question.text || '').trim()
+  const answer = String(question.correctAnswer || question.answer || '').trim()
+  const rawChoices = Array.isArray(question.choices) && question.choices.length
+    ? question.choices
+    : Array.isArray(question.options) && question.options.length
+      ? question.options
+      : base.choices
+
+  const choices = rawChoices.map((choice, choiceIndex) => {
+    const text = String(choice?.text || choice || '').trim()
+    return {
+      id: choice?.id || `choice-${choiceIndex + 1}`,
+      text,
+      is_correct: Boolean(choice?.is_correct || choice?.correct || (answer && text.toLowerCase() === answer.toLowerCase())),
+    }
+  })
+
+  if (!choices.some((choice) => choice.is_correct) && choices.length) {
+    choices[0] = { ...choices[0], is_correct: true }
+  }
+
+  return {
+    ...base,
+    id: question.id || `ai-question-${index + 1}-${Date.now()}`,
+    type,
+    question: prompt,
+    text: prompt,
+    choices,
+    correctAnswer: answer || choices.find((choice) => choice.is_correct)?.text || '',
+    explanation: question.explanation || '',
+    trivia: question.trivia || '',
+    learningTip: question.learningTip || '',
+    difficulty: question.difficulty || 'Medium',
+    conceptTags: Array.isArray(question.conceptTags) ? question.conceptTags : [],
+  }
 }
 
 export default function QuizBuilderPage() {
@@ -21,6 +71,7 @@ export default function QuizBuilderPage() {
   const userId = user?.id
   const [searchParams] = useSearchParams()
   const initialType = normalizeQuizType(searchParams.get('type') || 'multiple-choice')
+  const aiMode = searchParams.get('ai') === '1'
   const [draftId] = useState(() => searchParams.get('draft') || quizId || `draft-${Date.now()}`)
   const key = quizDraftKey(courseId, draftId)
 
@@ -35,23 +86,83 @@ export default function QuizBuilderPage() {
   const [messageType, setMessageType] = useState('info')
 
   useEffect(() => {
-    const cached = safeParse(localStorage.getItem(key))
-    if (cached) {
-      setQuizInfo(cached.quizInfo)
-      setQuestions(cached.questions || [])
-      setPageLoading(false)
-      return
-    }
+    const cancelled = { current: false }
 
-    if (quizId) {
-      loadQuiz()
-    } else {
+    async function initializeBuilder() {
+      const cached = safeParse(localStorage.getItem(key))
+      if (cached) {
+        setQuizInfo(cached.quizInfo)
+        setQuestions(cached.questions || [])
+        setPageLoading(false)
+        return
+      }
+
+      if (quizId) {
+        loadQuiz()
+        return
+      }
+
+      if (aiMode) {
+        if (!userId) {
+          setPageLoading(true)
+          return
+        }
+        await generateAiDraft(cancelled)
+        return
+      }
+
       const draft = createQuizDraft(initialType)
       setQuizInfo(draft)
       setQuestions(draft.questions)
       setPageLoading(false)
     }
-  }, [key, quizId])
+
+    initializeBuilder()
+    return () => {
+      cancelled.current = true
+    }
+  }, [key, quizId, aiMode, initialType, courseId, userId])
+
+  async function generateAiDraft(cancelled = { current: false }) {
+    setPageLoading(true)
+    try {
+      const [courseRes, modulesRes] = await Promise.all([
+        apiFetch(`/api/courses/${courseId}?user_id=${encodeURIComponent(userId || '')}`),
+        apiFetch(`/api/courses/${courseId}/modules?user_id=${encodeURIComponent(userId || '')}`),
+      ])
+      const [courseData, modulesData] = await Promise.all([safeJson(courseRes), safeJson(modulesRes)])
+      if (!courseRes.ok) throw new Error(getApiErrorMessage(courseData, 'We could not load this course for AI quiz generation.'))
+
+      const moduleList = Array.isArray(modulesData) ? modulesData : []
+      const source = {
+        title: courseData?.title || 'Course quiz',
+        description: courseData?.description || '',
+        notes: [courseData?.subject, courseData?.section, courseData?.level].filter(Boolean).join(' '),
+        content: moduleList.map((module) => [module.title, module.description].filter(Boolean).join('\n')).filter(Boolean).join('\n\n'),
+      }
+      const generated = buildAiQuiz({ source, count: 8 }).map(normalizeAiQuestion)
+      const draft = {
+        ...createQuizDraft(generated[0]?.type || initialType),
+        title: `${courseData?.title || 'Course'} AI Quiz`,
+        description: courseData?.description || 'AI-generated quiz draft. Review questions before publishing.',
+        questions: generated.length ? generated : createQuizDraft(initialType).questions,
+      }
+
+      if (cancelled.current) return
+      setQuizInfo(draft)
+      setQuestions(draft.questions)
+      persist(draft.questions, draft)
+      showMessage('AI quiz draft generated. Review, edit, then publish when ready.', 'success')
+    } catch (err) {
+      if (cancelled.current) return
+      const fallback = createQuizDraft(initialType)
+      setQuizInfo(fallback)
+      setQuestions(fallback.questions)
+      showMessage(err.message || 'AI generation failed. Started a blank quiz instead.', 'error')
+    } finally {
+      if (!cancelled.current) setPageLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!courseId || !userId) return
@@ -76,19 +187,29 @@ export default function QuizBuilderPage() {
       const res = await apiFetch(`/api/quizzes/${quizId}`)
       const data = await safeJson(res)
       if (!res.ok) throw new Error(getApiErrorMessage(data, 'Failed to load quiz'))
+      const settings = getQuizSettings(data)
+      const questionSource = getQuizQuestionsSource(data)
 
       const nextInfo = {
         ...createQuizDraft(initialType),
         title: data.title || 'Untitled Quiz',
         description: data.description || '',
-        time_limit: data.time_limit ? String(data.time_limit) : 30,
+        instructions: data.instructions || settings.instructions || '',
+        time_limit: settings.time_limit ? String(settings.time_limit) : '',
         due_at: data.due_at ? new Date(data.due_at).toISOString().slice(0, 16) : '',
-        attempts_allowed: data.attempts_allowed || 1,
-        passing_score: data.passing_score || 70,
+        attempts_allowed: settings.attempts_allowed || 1,
+        passing_score: settings.passing_score || 70,
         status: data.status || 'draft',
+        module_id: settings.module_id || '',
+        shuffleQuestions: settings.shuffleQuestions,
+        shuffleAnswers: settings.shuffleAnswers,
+        showCorrectAnswers: settings.showCorrectAnswers,
+        autoGrading: settings.autoGrading,
+        mode: settings.mode || 'practice',
+        assignment_id: data.assignment_id || '',
       }
-      const nextQuestions = Array.isArray(data.questions) && data.questions.length
-        ? data.questions.map((q) => ({
+      const nextQuestions = Array.isArray(questionSource) && questionSource.length
+        ? questionSource.map((q) => ({
             ...createQuizQuestion(q.type),
             id: q.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
             type: normalizeQuizType(q.type),
@@ -192,37 +313,68 @@ export default function QuizBuilderPage() {
   }
 
   function buildPayload(status) {
-    return {
-      user_id: userId,
-      title: quizInfo.title.trim(),
-      description: quizInfo.description.trim(),
-      time_limit: quizInfo.time_limit ? parseInt(quizInfo.time_limit) : null,
-      due_at: quizInfo.due_at ? new Date(quizInfo.due_at).toISOString() : null,
-      attempts_allowed: parseInt(quizInfo.attempts_allowed || 1),
-      passing_score: parseInt(quizInfo.passing_score || 70),
-      status,
-      questions: questions.map((q, idx) => ({
+    const timeLimit = quizInfo.time_limit ? parseInt(quizInfo.time_limit, 10) : null
+    const attemptsAllowed = parseInt(quizInfo.attempts_allowed || 1, 10) || 1
+    const passingScore = parseInt(quizInfo.passing_score || 70, 10) || 70
+
+    const normalizedQuestions = questions.map((q, idx) => {
+      const choices = (q.choices || []).map((choice, choiceIndex) => ({
+        id: choice.id || `choice-${choiceIndex + 1}`,
+        text: String(choice.text || choice || '').trim(),
+        is_correct: Boolean(choice.is_correct),
+      }))
+      const correctIndex = Math.max(0, choices.findIndex((choice) => choice.is_correct))
+
+      return {
         id: q.id,
         question: q.question || q.text,
-        text: q.text,
+        text: q.text || q.question,
         type: toApiType(q.type),
-        points: parseInt(q.points || 1),
+        points: parseInt(q.points || 1, 10) || 1,
         order: idx,
         caseSensitive: q.answerValidation || false,
-        choices: (q.choices || []).map((choice, choiceIndex) => ({
-          id: choice.id || `choice-${choiceIndex + 1}`,
-          text: String(choice.text || choice || '').trim(),
-          is_correct: Boolean(choice.is_correct),
-        })),
-        options: Array.isArray(q.options) ? q.options : q.choices,
-        correct: Number.isInteger(q.correct) ? q.correct : 0,
-        correctAnswer: q.correctAnswer || q.options?.[q.correct] || '',
+        choices,
+        options: choices.map((choice) => choice.text),
+        correct: correctIndex,
+        correctAnswer: choices[correctIndex]?.text || q.correctAnswer || '',
         difficulty: q.difficulty || 'Medium',
         conceptTags: Array.isArray(q.conceptTags) ? q.conceptTags : [],
         explanation: q.explanation || '',
         trivia: q.trivia || '',
         learningTip: q.learningTip || '',
-      })),
+      }
+    })
+
+    return {
+      user_id: userId,
+      title: quizInfo.title.trim(),
+      description: quizInfo.description.trim(),
+      instructions: quizInfo.instructions?.trim() || '',
+      time_limit: timeLimit,
+      due_at: quizInfo.due_at ? new Date(quizInfo.due_at).toISOString() : null,
+      attempts_allowed: attemptsAllowed,
+      passing_score: passingScore,
+      module_id: quizInfo.module_id || null,
+      shuffleQuestions: Boolean(quizInfo.shuffleQuestions),
+      shuffleAnswers: Boolean(quizInfo.shuffleAnswers),
+      showCorrectAnswers: quizInfo.showCorrectAnswers !== false,
+      autoGrading: quizInfo.autoGrading !== false,
+      mode: quizInfo.mode || 'practice',
+      status,
+      questions: normalizedQuestions,
+      meta: {
+        questions: normalizedQuestions,
+        time_limit: timeLimit,
+        attempts_allowed: attemptsAllowed,
+        passing_score: passingScore,
+        module_id: quizInfo.module_id || null,
+        shuffleQuestions: Boolean(quizInfo.shuffleQuestions),
+        shuffleAnswers: Boolean(quizInfo.shuffleAnswers),
+        showCorrectAnswers: quizInfo.showCorrectAnswers !== false,
+        autoGrading: quizInfo.autoGrading !== false,
+        mode: quizInfo.mode || 'practice',
+        instructions: quizInfo.instructions?.trim() || '',
+      },
     }
   }
 
@@ -231,7 +383,7 @@ export default function QuizBuilderPage() {
     if (!questions.length) return 'Add at least one question.'
     const invalid = questions.find((q) => {
       if (!q.text?.trim()) return true
-      if (q.type === 'open-ended') return false
+      if (q.type === 'open-ended' || q.type === 'fill-blank') return false
       return !(q.choices || []).some((choice) => choice.is_correct && String(choice.text || '').trim())
     })
     return invalid ? 'Every question needs text and a correct answer.' : ''
@@ -246,12 +398,17 @@ export default function QuizBuilderPage() {
 
     setIsSaving(true)
     try {
-      const method = quizId ? 'PUT' : 'POST'
+      const method = quizId ? 'PATCH' : 'POST'
       const url = quizId ? `/api/quizzes/${quizId}` : `/api/courses/${courseId}/quizzes`
+      const payload = buildPayload(status)
+      if (quizId) {
+        payload.quiz_id = quizId
+        payload.assignment_id = quizInfo.assignment_id || null
+      }
       const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload(status)),
+        body: JSON.stringify(payload),
       })
       const data = await safeJson(res)
       if (!res.ok) throw new Error(getApiErrorMessage(data, `Failed to ${status === 'published' ? 'publish' : 'save'} quiz`))
@@ -283,9 +440,8 @@ export default function QuizBuilderPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:inline-flex">Preview quiz</button>
           <button type="button" onClick={() => saveQuiz('draft')} disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"><Save className="h-4 w-4" /> Draft</button>
-          <button type="button" onClick={() => saveQuiz('published')} disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"><Send className="h-4 w-4" /> Publish</button>
+          <button type="button" onClick={() => saveQuiz('published')} disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"><Send className="h-4 w-4" /> Publish Quiz</button>
         </div>
       </header>
 
@@ -299,7 +455,7 @@ export default function QuizBuilderPage() {
       </AnimatePresence>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <QuizSettingsSidebar quizInfo={quizInfo} setQuizInfo={setQuizInfo} modules={modules} />
+        <QuizPreviewPanel questions={questions} totalPoints={totalPoints} />
         <main className="min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
           <div className="mx-auto max-w-4xl space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -333,7 +489,14 @@ export default function QuizBuilderPage() {
             </button>
           </div>
         </main>
-        <QuizPreviewPanel questions={questions} totalPoints={totalPoints} />
+        <QuizSettingsSidebar
+          quizInfo={quizInfo}
+          setQuizInfo={setQuizInfo}
+          modules={modules}
+          onSaveDraft={() => saveQuiz('draft')}
+          onPublish={() => saveQuiz('published')}
+          isSaving={isSaving}
+        />
       </div>
     </div>
   )

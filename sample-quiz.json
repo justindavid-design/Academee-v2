@@ -1,0 +1,22 @@
+{
+  "title": "Sample Quiz",
+  "meta": {
+    "questions": [
+      {
+        "id": "q1",
+        "text": "What does HTTPS do?",
+        "options": ["Encrypts traffic", "Caches content", "Compresses images"],
+        "correct": 0,
+        "explanation": "HTTPS encrypts HTTP traffic with TLS.",
+        "trivia": "HTTPS stands for HTTP over TLS.",
+        "learningTip": "Remember TLS certificates and HTTPS flows."
+      },
+      {
+        "id": "q2",
+        "text": "Which port is default for HTTP?",
+        "options": ["80", "443", "8080"],
+        "correct": 0
+      }
+    ]
+  }
+}

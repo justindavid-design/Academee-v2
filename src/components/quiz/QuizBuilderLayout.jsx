@@ -1,12 +1,12 @@
 ﻿import React from 'react'
-import { Clock, Copy, Eye, GripVertical, MoreVertical, PenLine, Plus, Trash2 } from 'lucide-react'
+import { Clock, Copy, Eye, GripVertical, PenLine, Save, Send, Trash2 } from 'lucide-react'
 import { getQuestionTypeLabel } from './quizTypes'
 
-export function QuizSettingsSidebar({ quizInfo, setQuizInfo, modules = [] }) {
+export function QuizSettingsSidebar({ quizInfo, setQuizInfo, modules = [], onSaveDraft, onPublish, isSaving = false }) {
   const update = (patch) => setQuizInfo({ ...quizInfo, ...patch })
 
   return (
-    <aside className="w-full border-b border-slate-200 bg-white lg:sticky lg:top-0 lg:h-screen lg:w-[320px] lg:flex-shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+    <aside className="w-full border-t border-slate-200 bg-white lg:sticky lg:top-0 lg:h-screen lg:w-[320px] lg:flex-shrink-0 lg:overflow-y-auto lg:border-l lg:border-t-0">
       <div className="space-y-5 p-5">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Quiz settings</p>
@@ -60,6 +60,15 @@ export function QuizSettingsSidebar({ quizInfo, setQuizInfo, modules = [] }) {
           <Toggle label="Shuffle Answers" checked={!!quizInfo.shuffleAnswers} onChange={(value) => update({ shuffleAnswers: value })} />
           <Toggle label="Show Correct Answers" checked={quizInfo.showCorrectAnswers !== false} onChange={(value) => update({ showCorrectAnswers: value })} />
           <Toggle label="Auto Grading" checked={quizInfo.autoGrading !== false} onChange={(value) => update({ autoGrading: value })} />
+        </div>
+
+        <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+          <button type="button" onClick={onPublish} disabled={isSaving} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-800 disabled:opacity-60">
+            <Send className="h-4 w-4" /> Publish Quiz
+          </button>
+          <button type="button" onClick={onSaveDraft} disabled={isSaving} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+            <Save className="h-4 w-4" /> Save Draft
+          </button>
         </div>
       </div>
     </aside>
@@ -148,7 +157,7 @@ export function QuestionCard({ question, index, onEdit, onDuplicate, onDelete, o
 
 export function QuizPreviewPanel({ questions = [], totalPoints = 0 }) {
   return (
-    <aside className="hidden w-[260px] flex-shrink-0 border-l border-slate-200 bg-white p-5 xl:block">
+    <aside className="hidden w-[280px] flex-shrink-0 border-r border-slate-200 bg-white p-5 xl:block">
       <h2 className="text-sm font-bold text-slate-950">Quiz summary</h2>
       <div className="mt-4 grid gap-3">
         <Summary label="Questions" value={questions.length} />

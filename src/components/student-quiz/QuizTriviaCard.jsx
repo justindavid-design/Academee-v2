@@ -11,15 +11,14 @@ export function QuizTriviaCard({ trivia, learningTip, conceptTags }) {
   if (!hasContent) return null
 
   return (
-    <div className='space-y-3'>
-      {/* Trivia */}
+    <div className="space-y-3">
       {trivia && (
-        <div className='rounded-lg border-2 border-blue-300 bg-blue-50 p-4 text-blue-900 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-50'>
-          <div className='flex items-start gap-3'>
-            <span className='text-2xl flex-shrink-0'>🎓</span>
-            <div className='flex-1 min-w-0'>
-              <h4 className='font-semibold mb-1 text-sm md:text-base'>Fun Fact</h4>
-              <p className='text-sm leading-relaxed whitespace-pre-wrap break-words'>
+        <div className="rounded-lg border-2 border-blue-300 bg-blue-50 p-4 text-blue-900 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-50">
+          <div className="flex items-start gap-3">
+            <span className="flex-shrink-0 text-sm font-bold uppercase tracking-[0.12em]">Did you know?</span>
+            <div className="min-w-0 flex-1">
+              <h4 className="mb-1 text-sm font-semibold md:text-base">Fun Fact</h4>
+              <p className="break-words whitespace-pre-wrap text-sm leading-relaxed">
                 {trivia}
               </p>
             </div>
@@ -27,14 +26,13 @@ export function QuizTriviaCard({ trivia, learningTip, conceptTags }) {
         </div>
       )}
 
-      {/* Learning Tip */}
       {learningTip && (
-        <div className='rounded-lg border-2 border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-50'>
-          <div className='flex items-start gap-3'>
-            <span className='text-2xl flex-shrink-0'>💡</span>
-            <div className='flex-1 min-w-0'>
-              <h4 className='font-semibold mb-1 text-sm md:text-base'>Learning Tip</h4>
-              <p className='text-sm leading-relaxed whitespace-pre-wrap break-words'>
+        <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-50">
+          <div className="flex items-start gap-3">
+            <span className="flex-shrink-0 text-sm font-bold uppercase tracking-[0.12em]">Tip</span>
+            <div className="min-w-0 flex-1">
+              <h4 className="mb-1 text-sm font-semibold md:text-base">Learning Tip</h4>
+              <p className="break-words whitespace-pre-wrap text-sm leading-relaxed">
                 {learningTip}
               </p>
             </div>
@@ -42,15 +40,14 @@ export function QuizTriviaCard({ trivia, learningTip, conceptTags }) {
         </div>
       )}
 
-      {/* Concept Tags */}
       {Array.isArray(conceptTags) && conceptTags.length > 0 && (
-        <div className='rounded-lg border-2 border-purple-300 bg-purple-50 p-4 text-purple-900 dark:border-purple-700 dark:bg-purple-900 dark:text-purple-50'>
-          <h4 className='font-semibold mb-2 text-sm md:text-base'>Related Concepts</h4>
-          <div className='flex flex-wrap gap-2'>
+        <div className="rounded-lg border-2 border-purple-300 bg-purple-50 p-4 text-purple-900 dark:border-purple-700 dark:bg-purple-900 dark:text-purple-50">
+          <h4 className="mb-2 text-sm font-semibold md:text-base">Related Concepts</h4>
+          <div className="flex flex-wrap gap-2">
             {conceptTags.map((tag, index) => (
               <span
                 key={index}
-                className='inline-block rounded-full bg-purple-200 px-3 py-1 text-xs font-medium dark:bg-purple-800'
+                className="inline-block rounded-full bg-purple-200 px-3 py-1 text-xs font-medium dark:bg-purple-800"
               >
                 {tag}
               </span>

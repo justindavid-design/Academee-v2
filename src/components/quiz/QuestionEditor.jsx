@@ -132,7 +132,7 @@ export default function QuestionEditor() {
             <section className="space-y-5">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <Field label="Question prompt">
-                  <textarea value={question.text} onChange={(e) => updateQuestion({ text: e.target.value })} className="quiz-input min-h-[140px] resize-none text-base" placeholder="Write the question students will answer..." />
+                  <textarea value={question.text} onChange={(e) => updateQuestion({ text: e.target.value, question: e.target.value })} className="quiz-input min-h-[140px] resize-none text-base" placeholder="Write the question students will answer..." />
                 </Field>
               </div>
 

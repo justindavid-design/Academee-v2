@@ -3,9 +3,10 @@ import AdaptiveFeedback from './AdaptiveFeedback'
 import { buildOverallFeedback, buildQuestionFeedback, normalizeQuizQuestions, parseSubmissionContent } from './quizUtils'
 import TeacherAnalytics from '../analytics/TeacherAnalytics'
 import { buildTeacherAnalytics, getQuizAttempts } from '../../lib/quizAnalytics'
+import { getQuizQuestionsSource } from '../quiz/quizTypes'
 
 export default function QuizAttemptCard({ quiz, submission, onSubmit }) {
-  const questions = useMemo(() => normalizeQuizQuestions(quiz?.meta?.questions), [quiz?.meta?.questions])
+  const questions = useMemo(() => normalizeQuizQuestions(getQuizQuestionsSource(quiz)), [quiz])
   const existingAttempt = useMemo(() => parseSubmissionContent(submission?.content), [submission?.content])
   const [selectedAnswers, setSelectedAnswers] = useState(() => existingAttempt?.answers || {})
   const [submittedAttempt, setSubmittedAttempt] = useState(existingAttempt)

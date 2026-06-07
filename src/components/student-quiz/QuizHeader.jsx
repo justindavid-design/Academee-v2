@@ -18,6 +18,8 @@ export function QuizHeader({
   isActive = true,
   onTimeUp = null,
   onExit = null,
+  aiEnabled = true,
+  onToggleAiFeedback = null,
   showProgress = true,
 }) {
   return (
@@ -27,7 +29,7 @@ export function QuizHeader({
       className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm"
     >
       <div className="px-6 py-4 space-y-4">
-        {/* Top bar: back button and title */}
+        {/* Top bar: back button, title, timer, and optional AI toggle */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1">
             {onExit && (
@@ -42,12 +44,27 @@ export function QuizHeader({
             <h1 className="text-lg font-bold text-slate-900 truncate">{quizTitle}</h1>
           </div>
 
-          {/* Timer on the right */}
-          <QuizTimer
-            duration={duration}
-            isActive={isActive}
-            onTimeUp={onTimeUp}
-          />
+          <div className="flex items-center gap-3">
+            {onToggleAiFeedback && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-600">AI Feedback</label>
+                <button
+                  type="button"
+                  onClick={onToggleAiFeedback}
+                  className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${aiEnabled ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-700 border-slate-300'}`}
+                  aria-pressed={aiEnabled}
+                >
+                  {aiEnabled ? 'On' : 'Off'}
+                </button>
+              </div>
+            )}
+
+            <QuizTimer
+              duration={duration}
+              isActive={isActive}
+              onTimeUp={onTimeUp}
+            />
+          </div>
         </div>
 
         {/* Progress bar */}

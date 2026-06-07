@@ -17,6 +17,10 @@ import {
   selectAdaptiveNextQuestion,
   updateMasteryProfile,
 } from '../../lib/adaptiveQuizEngine'
+import { getQuizQuestionsSource, getQuizSettings, normalizePassThreshold } from '../quiz/quizTypes'
+
+const EMPTY_INITIAL_ANSWERS = Object.freeze({})
+
 
 function normalizeQuizMode(value) {
   const mode = String(value || '').toLowerCase()
@@ -38,6 +42,39 @@ function pickInitialQuestionIndex(questions = []) {
 
 function getPrimaryConcept(question) {
   return question?.conceptTags?.[0] || 'general'
+}
+
+function shuffleArray(items = []) {
+  const next = [...items]
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+  }
+  return next
+}
+
+function prepareSessionQuestions(questions = [], { shuffleQuestions = false, shuffleAnswers = false } = {}) {
+  const normalized = normalizeQuizQuestions(questions)
+  const orderedQuestions = shuffleQuestions ? shuffleArray(normalized) : normalized
+
+  if (!shuffleAnswers) return orderedQuestions
+
+  return orderedQuestions.map((question) => {
+    const options = Array.isArray(question.options) ? [...question.options] : []
+    if (options.length < 2) return question
+
+    const correctAnswer = options[Number(question.correct)] ?? question.correctAnswer ?? ''
+    const shuffledOptions = shuffleArray(options)
+    const correctIndex = shuffledOptions.findIndex((option) => option === correctAnswer)
+
+    return {
+      ...question,
+      options: shuffledOptions,
+      choices: shuffledOptions,
+      correct: correctIndex >= 0 ? correctIndex : question.correct,
+      correctAnswer: correctAnswer || question.correctAnswer || '',
+    }
+  })
 }
 
 function rebuildAdaptiveSession(questions = [], answerSequence = [], answerRecords = {}) {
@@ -142,6 +179,12 @@ function buildAnswerRecord(question, selectedAnswerIndex, responseTimeMs) {
   }
 }
 
+function buildAnsweredIndices(answers = {}) {
+  return Object.keys(answers)
+    .map(Number)
+    .filter((index) => Number.isInteger(index) && answers[index] !== null && answers[index] !== undefined)
+}
+
 /**
  * QuizPlayer - Main fullscreen quiz player component
  * Orchestrates the complete student quiz-taking experience
@@ -151,21 +194,28 @@ export function QuizPlayer({
   quiz = {},
   onSubmit = null,
   onExit = null,
-  initialAnswers = {},
+  initialAnswers = EMPTY_INITIAL_ANSWERS,
+  enableAIFeedback = true,
 }) {
+  const quizSettings = useMemo(() => getQuizSettings(quiz), [quiz])
   const questions = useMemo(
-    () => normalizeQuizQuestions(quiz.meta?.questions || []),
-    [quiz.meta?.questions]
+    () =>
+      prepareSessionQuestions(getQuizQuestionsSource(quiz), {
+        shuffleQuestions: quizSettings.shuffleQuestions,
+        shuffleAnswers: quizSettings.shuffleAnswers,
+      }),
+    [quiz, quizSettings.shuffleAnswers, quizSettings.shuffleQuestions]
   )
   const quizTitle = quiz.title || 'Quiz'
-  const duration = quiz.meta?.duration || 30
-  const passThreshold = quiz.meta?.passThreshold || 0.7
-  const quizMode = normalizeQuizMode(quiz.meta?.mode || quiz.meta?.settings?.mode || quiz.mode)
+  const duration = quizSettings.time_limit || 30
+  const passThreshold = normalizePassThreshold(quizSettings.passing_score, 0.7)
+  const quizMode = normalizeQuizMode(quizSettings.mode || quiz.mode)
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState(initialAnswers)
   const [answerRecords, setAnswerRecords] = useState({})
   const [answerSequence, setAnswerSequence] = useState([])
+  const [visitedQuestionPath, setVisitedQuestionPath] = useState([])
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [showSubmitModal, setShowSubmitModal] = useState(false)
@@ -173,20 +223,39 @@ export function QuizPlayer({
   const [submittedResult, setSubmittedResult] = useState(null)
   const [aiFeedbackByQuestion, setAiFeedbackByQuestion] = useState({})
 
+  const [aiEnabled, setAiEnabled] = useState(Boolean(enableAIFeedback))
+
+  // persist AI toggle in localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('quiz_ai_feedback_enabled')
+      if (saved !== null) setAiEnabled(saved === 'true')
+    } catch (e) {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('quiz_ai_feedback_enabled', aiEnabled ? 'true' : 'false')
+    } catch (e) {}
+  }, [aiEnabled])
+
   const { requestFeedback } = useAIFeedback({
-    enabled: quizMode !== 'exam',
+    enabled: aiEnabled && quizMode !== 'exam',
   })
 
   const questionStartTimesRef = useRef({})
 
   useEffect(() => {
     if (!quiz.id) return
-
     const startIndex = pickInitialQuestionIndex(questions)
+    console.debug('[QuizPlayer] initializing session for quiz', quiz.id, 'startIndex', startIndex)
     setCurrentQuestion(startIndex)
     setAnswers(initialAnswers || {})
     setAnswerRecords({})
     setAnswerSequence([])
+    setVisitedQuestionPath([startIndex])
     setSubmitted(false)
     setSubmitting(false)
     setShowSubmitModal(false)
@@ -197,7 +266,7 @@ export function QuizPlayer({
 
   useEffect(() => {
     questionStartTimesRef.current[currentQuestion] = Date.now()
-  }, [currentQuestion])
+  }, [])
 
   const adaptiveSession = useMemo(
     () => rebuildAdaptiveSession(questions, answerSequence, answerRecords),
@@ -209,32 +278,28 @@ export function QuizPlayer({
     [answers]
   )
 
-  const answeredQuestions = useMemo(
-    () => Object.keys(answers)
-      .map(Number)
-      .filter((index) => answers[index] !== null && answers[index] !== undefined),
-    [answers]
-  )
+  const answeredQuestions = useMemo(() => buildAnsweredIndices(answers), [answers])
+  const allQuestionsAnswered = questions.length > 0 && answeredQuestions.length >= questions.length
 
   const currentQ = questions[currentQuestion]
   const currentRecord = answerRecords[currentQuestion] || null
-  const hasCurrentAnswer = currentRecord || Number.isFinite(Number(answers[currentQuestion]))
+  const hasCurrentAnswer = currentRecord || answers[currentQuestion] !== null && answers[currentQuestion] !== undefined
 
   const nextQuestionIndex = useMemo(() => {
     if (!questions.length) return null
 
-    const answeredIndices = Object.keys(answers)
-      .map(Number)
-      .filter((index) => answers[index] !== null && answers[index] !== undefined)
+    const answeredIndices = buildAnsweredIndices(answers)
 
     if (!hasCurrentAnswer) {
-      const nextUnanswered = questions.findIndex((_, index) => index > currentQuestion && !answeredIndices.includes(index))
+      const nextUnanswered = questions.findIndex((_, index) => index > currentQuestion && index !== currentQuestion && !answeredIndices.includes(index))
       if (nextUnanswered >= 0) return nextUnanswered
-      return questions.findIndex((_, index) => !answeredIndices.includes(index))
+      const fallbackUnanswered = questions.findIndex((_, index) => index !== currentQuestion && !answeredIndices.includes(index))
+      return fallbackUnanswered >= 0 ? fallbackUnanswered : null
     }
 
     if (!currentQ || !currentRecord) {
-      return questions.findIndex((_, index) => !answeredIndices.includes(index))
+      const fallbackIndex = questions.findIndex((_, index) => index !== currentQuestion && !answeredIndices.includes(index))
+      return fallbackIndex >= 0 ? fallbackIndex : null
     }
 
     const currentOutcome = {
@@ -244,7 +309,7 @@ export function QuizPlayer({
       conceptTags: currentQ.conceptTags,
     }
 
-    return selectAdaptiveNextQuestion({
+    const selectedIndex = selectAdaptiveNextQuestion({
       questions,
       currentIndex: currentQuestion,
       masteryByConcept: adaptiveSession.masteryByConcept,
@@ -252,7 +317,16 @@ export function QuizPlayer({
       answeredIndices,
       currentOutcome,
     })
+
+    return selectedIndex === currentQuestion ? null : selectedIndex
   }, [adaptiveSession.analyticsList, adaptiveSession.masteryByConcept, answers, currentQuestion, currentQ, currentRecord, hasCurrentAnswer, questions])
+
+  useEffect(() => {
+    const answeredIndices = buildAnsweredIndices(answers)
+    console.log('Current Question:', currentQuestion)
+    console.log('Next Question:', nextQuestionIndex)
+    console.log('Answered Questions:', answeredIndices)
+  }, [answers, currentQuestion, nextQuestionIndex])
 
   const adaptiveInsights = useMemo(
     () => buildAdaptiveInsights({
@@ -264,7 +338,7 @@ export function QuizPlayer({
 
   const feedbackMode = quizMode === 'exam' ? QuizMode.EXAM : quizMode === 'study' ? QuizMode.STUDY : QuizMode.PRACTICE
   const feedbackLayout = quizMode === 'study' ? FeedbackLayout.PANEL : FeedbackLayout.CARD
-  const showFeedbackAutomatically = quizMode !== 'exam'
+  const showFeedbackAutomatically = quizMode !== 'exam' && quizSettings.showCorrectAnswers !== false
 
   useEffect(() => {
     const quizKey = `quiz_attempt_${quiz.id || 'draft'}`
@@ -283,26 +357,56 @@ export function QuizPlayer({
     )
   }, [adaptiveSession.masteryByConcept, answerSequence, answers, currentQuestion, quiz.id])
 
-  const goToQuestion = useCallback((index) => {
+  const goToQuestion = useCallback((index, { trackVisit = true } = {}) => {
     if (index >= 0 && index < questions.length) {
       setCurrentQuestion(index)
+      if (trackVisit) {
+        setVisitedQuestionPath((prev) => {
+          const currentPath = prev.length ? prev : [currentQuestion]
+          return currentPath[currentPath.length - 1] === index ? currentPath : [...currentPath, index]
+        })
+      }
     }
-  }, [questions.length])
+  }, [currentQuestion, questions.length])
 
   const goPrevious = useCallback(() => {
-    goToQuestion(Math.max(0, currentQuestion - 1))
-  }, [currentQuestion, goToQuestion])
+    setVisitedQuestionPath((prev) => {
+      if (prev.length > 1) {
+        const nextPath = prev.slice(0, -1)
+        const previousQuestion = nextPath[nextPath.length - 1]
+        setCurrentQuestion(previousQuestion)
+        return nextPath
+      }
+
+      return prev
+    })
+  }, [currentQuestion])
 
   const goNext = useCallback(() => {
+    if (!hasCurrentAnswer) {
+      console.log('Answer first before continuing')
+      return
+    }
+
     if (nextQuestionIndex === null || nextQuestionIndex === undefined) {
       handleSubmitClick()
       return
     }
+
+    if (nextQuestionIndex === currentQuestion) {
+      console.warn('Adaptive next question matched current question; blocking repeat.', {
+        currentQuestion,
+        nextQuestionIndex,
+      })
+      return
+    }
+
     goToQuestion(nextQuestionIndex)
-  }, [nextQuestionIndex, goToQuestion])
+  }, [currentQuestion, goToQuestion, hasCurrentAnswer, nextQuestionIndex])
 
   function handleAnswerSelect(optionIndex) {
-    if (!currentQ) return
+    if (!currentQ || submitted || submitting) return
+    console.debug('[QuizPlayer] handleAnswerSelect', { currentQuestion, optionIndex, submitted, submitting })
 
     const startedAt = questionStartTimesRef.current[currentQuestion] || Date.now()
     const responseTimeMs = Math.max(0, Date.now() - startedAt)
@@ -322,20 +426,25 @@ export function QuizPlayer({
       prev.includes(currentQuestion) ? prev : [...prev, currentQuestion]
     ))
 
+    const answeredQuestionIndex = currentQuestion
+
     void requestFeedback(currentQ, optionIndex)
       .then((feedback) => {
         if (!feedback) return
         setAiFeedbackByQuestion((prev) => ({
           ...prev,
-          [currentQuestion]: feedback,
+          [answeredQuestionIndex]: feedback,
         }))
       })
-      .catch(() => {
-        // Local adaptive feedback stays visible if the AI call fails.
+      .catch((error) => {
+        console.error('AI feedback generation failed:', error)
       })
   }
 
   function handleSubmitClick() {
+    if (!allQuestionsAnswered && nextQuestionIndex !== null && nextQuestionIndex !== undefined) {
+      return
+    }
     setShowSubmitModal(true)
   }
 
@@ -457,6 +566,7 @@ export function QuizPlayer({
             passThreshold={passThreshold}
             answers={submittedResult.answers}
             adaptiveInsights={submittedResult.adaptiveInsights}
+            showExplanations={quizSettings.showCorrectAnswers !== false}
             onExit={onExit}
           />
         </div>
@@ -493,6 +603,8 @@ export function QuizPlayer({
         isActive={!submitted}
         onTimeUp={handleTimeUp}
         onExit={onExit}
+        aiEnabled={aiEnabled}
+        onToggleAiFeedback={() => setAiEnabled((v) => !v)}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -532,7 +644,7 @@ export function QuizPlayer({
                           index={index}
                           text={option}
                           isSelected={Number(answers[currentQuestion]) === index}
-                          isDisabled={false}
+                          isDisabled={submitted || submitting}
                           onSelect={handleAnswerSelect}
                         />
                       ))}
@@ -562,7 +674,7 @@ export function QuizPlayer({
             <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
               <button
                 onClick={goPrevious}
-                disabled={currentQuestion <= 0}
+                disabled={visitedQuestionPath.length <= 1 && currentQuestion <= 0}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-900 font-medium hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -573,20 +685,39 @@ export function QuizPlayer({
                 Question {currentQuestion + 1} of {questions.length}
               </span>
 
-              {nextQuestionIndex !== null && nextQuestionIndex !== undefined ? (
+              {!hasCurrentAnswer ? (
+                <button
+                  type="button"
+                  disabled
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-500 font-medium bg-slate-50 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  Answer first
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : nextQuestionIndex !== null && nextQuestionIndex !== undefined ? (
                 <button
                   onClick={goNext}
+                  disabled={nextQuestionIndex === currentQuestion}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-900 font-medium hover:bg-slate-50 transition-colors"
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />
                 </button>
-              ) : (
+              ) : allQuestionsAnswered || nextQuestionIndex === null ? (
                 <button
                   onClick={handleSubmitClick}
                   className="px-6 py-2 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
                 >
                   Submit Quiz
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-500 font-medium bg-slate-50 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  Continue
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               )}
             </div>
